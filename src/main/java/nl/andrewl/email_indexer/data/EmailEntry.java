@@ -1,7 +1,7 @@
 package nl.andrewl.email_indexer.data;
 
 import java.time.ZonedDateTime;
-import java.util.Set;
+import java.util.List;
 
 public record EmailEntry(
 		String messageId,
@@ -10,5 +10,5 @@ public record EmailEntry(
 		String sentFrom,
 		ZonedDateTime date,
 		String body,
-		Set<String> tags
+		List<String> tags
 ) {}
