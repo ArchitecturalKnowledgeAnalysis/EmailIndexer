@@ -1,7 +1,9 @@
 package nl.andrewl.email_indexer.browser;
 
+import nl.andrewl.email_indexer.browser.email.EmailViewPanel;
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
+import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.EmailSearchResult;
 
 import javax.swing.*;
@@ -30,7 +32,7 @@ public class SearchPanel extends JPanel {
 		emailList.addListSelectionListener(e -> {
 			var selected = emailList.getSelectedValue();
 			if (selected != null) {
-				this.currentDataset.findEmailById(selected.messageId()).ifPresent(emailViewPanel::setEmail);
+				new EmailRepository(currentDataset).findEmailById(selected.messageId()).ifPresent(emailViewPanel::startNavigate);
 			}
 		});
 		JScrollPane listScroller = new JScrollPane(emailList);
@@ -38,7 +40,7 @@ public class SearchPanel extends JPanel {
 
 		searchButton.addActionListener(e -> {
 			if (this.currentDataset != null) {
-				var results = this.currentDataset.search(this.searchField.getText(), 1, 100);
+				var results = new EmailRepository(currentDataset).search(this.searchField.getText(), 1, 100);
 				showResults(results);
 			}
 		});
@@ -48,7 +50,7 @@ public class SearchPanel extends JPanel {
 		this.currentDataset = ds;
 		this.emailListModel.clear();
 		if (ds != null) {
-			showResults(ds.findAll(1, 100));
+			showResults(new EmailRepository(currentDataset).findAll(1, 100));
 		}
 	}
 

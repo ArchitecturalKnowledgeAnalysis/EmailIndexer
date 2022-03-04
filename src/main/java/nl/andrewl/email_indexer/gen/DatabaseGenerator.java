@@ -1,6 +1,7 @@
 package nl.andrewl.email_indexer.gen;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
+import nl.andrewl.email_indexer.data.QueryCache;
 import nl.andrewl.mbox_parser.Email;
 import nl.andrewl.mbox_parser.EmailHandler;
 
@@ -28,20 +29,7 @@ public class DatabaseGenerator implements AutoCloseable, EmailHandler {
 
 	private void initDatabase() throws SQLException {
 		try (Statement stmt = this.conn.createStatement()) {
-			stmt.executeUpdate("""
-				CREATE TABLE EMAIL (
-					MESSAGE_ID VARCHAR(255) PRIMARY KEY,
-					SUBJECT VARCHAR(1024),
-					IN_REPLY_TO VARCHAR(255),
-					SENT_FROM VARCHAR(255),
-					DATE TIMESTAMP WITH TIME ZONE,
-					BODY LONGTEXT
-				);
-				CREATE TABLE EMAIL_TAG (
-					MESSAGE_ID VARCHAR(255) NOT NULL REFERENCES EMAIL(MESSAGE_ID),
-					TAG VARCHAR(255) NOT NULL,
-					PRIMARY KEY (MESSAGE_ID, TAG)
-				);""");
+			stmt.executeUpdate(QueryCache.load("/sql/schema.sql"));
 		}
 	}
 

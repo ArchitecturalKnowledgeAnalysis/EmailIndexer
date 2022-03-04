@@ -1,5 +1,6 @@
 package nl.andrewl.email_indexer.browser;
 
+import nl.andrewl.email_indexer.browser.email.EmailViewPanel;
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.gen.EmailDatasetGenerator;
 
@@ -30,7 +31,13 @@ public class EmailDatasetBrowser extends JFrame {
 		this.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				super.windowClosing(e);
+				if (currentDataset != null) {
+					try {
+						currentDataset.close();
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					}
+				}
 			}
 		});
 	}
@@ -46,7 +53,6 @@ public class EmailDatasetBrowser extends JFrame {
 		this.currentDataset = ds;
 		searchPanel.setDataset(ds);
 		emailViewPanel.setDataset(ds);
-		System.out.println("Loaded dataset: " + ds);
 	}
 
 	private JMenuBar buildMenu() {
@@ -60,9 +66,10 @@ public class EmailDatasetBrowser extends JFrame {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				File f = fc.getSelectedFile();
 				try {
-					EmailDataset.openDataset(f.toPath())
+					EmailDataset.open(f.toPath())
 							.exceptionally(throwable -> {
 								throwable.printStackTrace();
+								JOptionPane.showMessageDialog(this, "Could not open dataset: " + throwable.getMessage(), "Could not open dataset", JOptionPane.WARNING_MESSAGE);
 								return null;
 							})
 							.thenAccept(this::setDataset);
@@ -81,12 +88,13 @@ public class EmailDatasetBrowser extends JFrame {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				Path mboxDir = fc.getSelectedFile().toPath();
 				fc.setCurrentDirectory(Path.of(".").toFile());
-				fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				result = fc.showSaveDialog(this);
 				if (result == JFileChooser.APPROVE_OPTION) {
-					Path dsFile = fc.getSelectedFile().toPath();
+					Path dsDir = fc.getSelectedFile().toPath();
 					try {
-						new EmailDatasetGenerator().generate(mboxDir, dsFile);
+						new EmailDatasetGenerator().generate(mboxDir, dsDir)
+								.thenRun(() -> JOptionPane.showMessageDialog(this, "Dataset generated!"));
 					} catch (Exception ex) {
 						ex.printStackTrace();
 					}

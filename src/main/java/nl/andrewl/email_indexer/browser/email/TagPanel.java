@@ -1,6 +1,7 @@
-package nl.andrewl.email_indexer.browser;
+package nl.andrewl.email_indexer.browser.email;
 
 import nl.andrewl.email_indexer.data.EmailEntry;
+import nl.andrewl.email_indexer.data.EmailRepository;
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,12 +13,14 @@ public class TagPanel extends JPanel {
 
 	public TagPanel(EmailViewPanel parent) {
 		super(new BorderLayout());
-
+		this.add(new JLabel("Tags"), BorderLayout.NORTH);
 		this.removeButton.setEnabled(false);
 		JList<String> tagList = new JList<>(this.tagListModel);
 		tagList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 		tagList.getSelectionModel().addListSelectionListener(e -> {
-			removeButton.setEnabled(tagList.getSelectedIndices().length > 0);
+			SwingUtilities.invokeLater(() -> {
+				removeButton.setEnabled(tagList.getSelectedIndices().length > 0);
+			});
 		});
 		JScrollPane scroller = new JScrollPane(tagList);
 		this.add(scroller, BorderLayout.CENTER);
@@ -27,14 +30,15 @@ public class TagPanel extends JPanel {
 		addButton.addActionListener(e -> {
 			String tag = JOptionPane.showInputDialog("Enter a tag.");
 			if (tag != null) {
-				parent.getCurrentDataset().addTag(email.messageId(), tag);
+				new EmailRepository(parent.getCurrentDataset()).addTag(email.messageId(), tag);
 				parent.refresh();
 			}
 		});
 		buttonPanel.add(addButton);
 		removeButton.addActionListener(e -> {
+			var repo = new EmailRepository(parent.getCurrentDataset());
 			for (var tag : tagList.getSelectedValuesList()) {
-				parent.getCurrentDataset().removeTag(email.messageId(), tag);
+				repo.removeTag(email.messageId(), tag);
 			}
 			parent.refresh();
 		});
