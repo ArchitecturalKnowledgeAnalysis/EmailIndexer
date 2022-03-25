@@ -32,7 +32,7 @@ public class EmailRepository {
 	}
 
 	public long countTaggedEmails() {
-		return DbUtils.count(conn, "SELECT COUNT(MESSAGE_ID) FROM EMAIL_TAG");
+		return DbUtils.count(conn, "SELECT COUNT(DISTINCT MESSAGE_ID) FROM EMAIL_TAG");
 	}
 
 	public Optional<EmailEntry> findEmailById(String messageId) {
