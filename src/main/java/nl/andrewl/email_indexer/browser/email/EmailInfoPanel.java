@@ -70,17 +70,6 @@ public class EmailInfoPanel extends JPanel {
 		this.add(this.tagPanel, subsectionConstraint);
 		subsectionConstraint.gridy++;
 		this.add(this.repliesPanel, subsectionConstraint);
-
-		// Add filler space.
-//		c.gridy = labels.length;
-//		c.gridx = 0;
-//		c.gridwidth = 2;
-//		c.weighty = 1;
-//		JPanel filler = new JPanel();
-//		contentPanel.add(filler, c);
-
-//		JScrollPane scrollPane = new JScrollPane(contentPanel);
-//		this.add(scrollPane);
 	}
 
 	public void setEmail(EmailEntry email) {

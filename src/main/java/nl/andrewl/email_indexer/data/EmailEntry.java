@@ -10,5 +10,6 @@ public record EmailEntry(
 		String sentFrom,
 		ZonedDateTime date,
 		String body,
-		List<String> tags
+		List<String> tags,
+		boolean hidden
 ) {}

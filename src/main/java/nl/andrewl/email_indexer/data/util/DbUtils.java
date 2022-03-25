@@ -1,4 +1,4 @@
-package nl.andrewl.email_indexer.data;
+package nl.andrewl.email_indexer.data.util;
 
 import java.sql.Connection;
 import java.sql.SQLException;

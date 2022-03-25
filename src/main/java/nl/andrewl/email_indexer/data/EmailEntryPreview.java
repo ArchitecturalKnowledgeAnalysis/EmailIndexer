@@ -16,7 +16,8 @@ public record EmailEntryPreview(
 		String subject,
 		String sentFrom,
 		ZonedDateTime date,
-		List<String> tags
+		List<String> tags,
+		boolean hidden
 ) {
 	public EmailEntryPreview (ResultSet rs) throws SQLException {
 		this(
@@ -24,7 +25,8 @@ public record EmailEntryPreview(
 				rs.getString(2),
 				rs.getString(3),
 				rs.getObject(4, ZonedDateTime.class),
-				new ArrayList<>()
+				new ArrayList<>(),
+				rs.getBoolean(6)
 		);
 		String t = rs.getString(5);
 		if (t != null && !t.isEmpty()) {

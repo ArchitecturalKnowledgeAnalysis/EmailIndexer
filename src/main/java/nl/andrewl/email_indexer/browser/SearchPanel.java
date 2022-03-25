@@ -45,20 +45,24 @@ public class SearchPanel extends JPanel {
 	}
 
 	public void setDataset(EmailDataset ds) {
-		this.currentDataset = ds;
 		this.emailListModel.clear();
 
 		// Set all elements
 		boolean enabled = ds != null;
 		searchButton.setEnabled(enabled);
 		searchField.setText(null);
-		showHiddenComboBox.setEnabled(enabled);
+
 		showHiddenComboBox.setSelectedItem(false);
-		showTaggedComboBox.setEnabled(enabled);
+		showHiddenComboBox.setEnabled(enabled);
+
 		showTaggedComboBox.setSelectedItem(null);
+		showTaggedComboBox.setEnabled(enabled);
+
 		nextPageButton.setEnabled(enabled);
 		previousPageButton.setEnabled(enabled);
 
+		// Set the dataset after updating all controls.
+		this.currentDataset = ds;
 		if (ds != null) {
 			this.currentPage = 1;
 			doSearch();
@@ -106,7 +110,7 @@ public class SearchPanel extends JPanel {
 		textSearchPanel.add(searchButton, c);
 		searchButton.addActionListener(e -> {
 			if (this.currentDataset != null) {
-				var results = new EmailRepository(currentDataset).search(searchField.getText(), 1, 100);
+				var results = new EmailRepository(currentDataset).search(searchField.getText());
 				showResults(results);
 			}
 		});
@@ -117,11 +121,13 @@ public class SearchPanel extends JPanel {
 		filterPanel.add(buildControlPanel("Show Hidden", showHiddenComboBox));
 		showHiddenComboBox.setSelectedItem(false);
 		showHiddenComboBox.addActionListener(e -> {
+			if (currentDataset == null) return;
 			this.currentPage = 1;
 			doSearch();
 		});
 		filterPanel.add(buildControlPanel("Show Tagged", showTaggedComboBox));
 		showTaggedComboBox.addActionListener(e -> {
+			if (currentDataset == null) return;
 			this.currentPage = 1;
 			doSearch();
 		});

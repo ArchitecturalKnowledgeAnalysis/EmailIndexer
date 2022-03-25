@@ -1,6 +1,8 @@
 package nl.andrewl.email_indexer.data;
 
 import nl.andrewl.email_indexer.EmailIndexSearcher;
+import nl.andrewl.email_indexer.data.util.ConditionBuilder;
+import nl.andrewl.email_indexer.data.util.DbUtils;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
@@ -47,7 +49,8 @@ public class EmailRepository {
 					rs.getString(3),
 					rs.getObject(4, ZonedDateTime.class),
 					rs.getString(5),
-					new ArrayList<>()
+					new ArrayList<>(),
+					rs.getBoolean(7)
 			);
 			String tags = rs.getString(6);
 			if (tags != null && !tags.isEmpty()) {
@@ -102,64 +105,64 @@ public class EmailRepository {
 		}
 	}
 
-	public EmailSearchResult search(String query, int page, int size) {
+	public EmailSearchResult search(String query) {
 		try {
-			var result = new EmailIndexSearcher().search(indexDir, query, page, size);
+			var result = new EmailIndexSearcher().search(indexDir, query, 1, 10000);
 			List<EmailEntryPreview> entries = new ArrayList<>(result.size());
 			for (var messageId : result.resultIds()) {
 				findRootEmailByChildId(messageId).ifPresent(preview -> {
-					if (!entries.contains(preview)) entries.add(preview);
+					if (!entries.contains(preview) && !preview.hidden()) entries.add(preview);
 				});
 			}
 			return EmailSearchResult.of(entries, result.page(), result.size(), result.totalResultsCount());
 		} catch (IOException | ParseException e) {
 			e.printStackTrace();
-			return EmailSearchResult.of(new ArrayList<>(), 1, size, 0);
+			return EmailSearchResult.of(new ArrayList<>(), 1, 10000, 0);
 		}
 	}
 
 	public EmailSearchResult findAll(int page, int size, Boolean hidden, Boolean tagged) {
-		String queryFormat = """
-			SELECT EMAIL.MESSAGE_ID, SUBJECT, SENT_FROM, DATE, LISTAGG(TAG, ',')
-			FROM EMAIL
-			LEFT JOIN EMAIL_TAG ON EMAIL.MESSAGE_ID = EMAIL_TAG.MESSAGE_ID
-			!!WHERE!!
-			GROUP BY EMAIL.MESSAGE_ID
-			!!HAVING!!
-			ORDER BY EMAIL.DATE DESC
-			LIMIT %d OFFSET %d""";
-		String countQuery = """
-			SELECT COUNT(EMAIL.MESSAGE_ID)
-			FROM EMAIL
-			!!WHERE!!""";
-		String query = String.format(queryFormat, size, (page - 1) * size);
-		List<String> whereConditions = new ArrayList<>();
-		if (hidden != null) whereConditions.add("EMAIL.HIDDEN = " + Boolean.toString(hidden).toUpperCase());
-		String whereClause = whereConditions.isEmpty() ? "" : "WHERE " + String.join(" AND ", whereConditions);
-		query = query.replace("!!WHERE!!", whereClause);
-		if (tagged != null) {
-			whereConditions.add("EMAIL.MESSAGE_ID " + (tagged ? "" : "NOT") + " IN (SELECT MESSAGE_ID FROM EMAIL_TAG)");
-		}
-		whereClause = whereConditions.isEmpty() ? "" : "WHERE " + String.join(" AND ", whereConditions);
-		countQuery = countQuery.replace("!!WHERE!!", whereClause);
-
-		List<String> havingConditions = new ArrayList<>();
-		if (tagged != null) {
-			havingConditions.add("COUNT(EMAIL_TAG.TAG) " + (tagged ? '>' : '=') + " 0");
-		}
-		String havingClause = havingConditions.isEmpty() ? "" : "HAVING " + String.join(" AND ", havingConditions);
-		query = query.replace("!!HAVING!!", havingClause);
-
 		List<EmailEntryPreview> entries = new ArrayList<>(size);
-		try (var stmt = conn.prepareStatement(query)) {
+		String q = getSearchQuery(page, size, hidden, tagged);
+		try (var stmt = conn.prepareStatement(q)) {
 			var rs = stmt.executeQuery();
 			while (rs.next()) entries.add(new EmailEntryPreview(rs));
-			long totalResultCount = DbUtils.count(conn, countQuery);
+			long totalResultCount = DbUtils.count(conn, getSearchCountQuery(hidden, tagged));
 			return EmailSearchResult.of(entries, page, size, totalResultCount);
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return EmailSearchResult.of(new ArrayList<>(), 1, size, 0);
 		}
+	}
+
+	private String getSearchQuery(int page, int size, Boolean hidden, Boolean tagged) {
+		String queryFormat = """
+			SELECT EMAIL.MESSAGE_ID, SUBJECT, SENT_FROM, DATE, LISTAGG(TAG, ','), HIDDEN
+			FROM EMAIL
+			LEFT JOIN EMAIL_TAG ON EMAIL.MESSAGE_ID = EMAIL_TAG.MESSAGE_ID
+			%s
+			GROUP BY EMAIL.MESSAGE_ID
+			%s
+			ORDER BY EMAIL.DATE DESC
+			LIMIT %d OFFSET %d""";
+		ConditionBuilder whereCb = ConditionBuilder.whereAnd();
+		if (hidden != null) whereCb.with("EMAIL.HIDDEN = " + Boolean.toString(hidden).toUpperCase());
+		ConditionBuilder havingCb = ConditionBuilder.havingAnd();
+		if (tagged != null) havingCb.with("COUNT(EMAIL_TAG.TAG) " + (tagged ? '>' : '=') + " 0");
+		return String.format(queryFormat, whereCb.build(), havingCb.build(), size, (page - 1) * size);
+	}
+
+	private String getSearchCountQuery(Boolean hidden, Boolean tagged) {
+		String countQuery = """
+			SELECT COUNT(EMAIL.MESSAGE_ID)
+			FROM EMAIL
+			%s""";
+		ConditionBuilder whereCb = ConditionBuilder.whereAnd();
+		if (hidden != null) whereCb.with("EMAIL.HIDDEN = " + Boolean.toString(hidden).toUpperCase());
+		if (tagged != null) {
+			whereCb.with("EMAIL.MESSAGE_ID " + (tagged ? "" : "NOT") + " IN (SELECT MESSAGE_ID FROM EMAIL_TAG)");
+		}
+		return String.format(countQuery, whereCb.build());
 	}
 
 	public boolean hasTag(String messageId, String tag) {
@@ -196,6 +199,10 @@ public class EmailRepository {
 		}
 	}
 
+	/**
+	 * Gets all tags in the dataset.
+	 * @return The list of all tags.
+	 */
 	public List<String> getAllTags() {
 		List<String> tags = new ArrayList<>();
 		try (var stmt = conn.prepareStatement("SELECT DISTINCT TAG FROM EMAIL_TAG ORDER BY TAG")) {
@@ -205,6 +212,74 @@ public class EmailRepository {
 			e.printStackTrace();
 		}
 		return tags;
+	}
+
+	/**
+	 * Gets the list of all tags belonging to any parents of the given email.
+	 * @param messageId The id of the email.
+	 * @return A list of tags.
+	 */
+	public List<String> getAllParentTags(String messageId) {
+		Set<String> tags = new HashSet<>();
+		try (
+			var parentStmt = conn.prepareStatement("SELECT IN_REPLY_TO FROM EMAIL WHERE MESSAGE_ID = ?");
+			var tagStmt = conn.prepareStatement("SELECT TAG FROM EMAIL_TAG WHERE MESSAGE_ID = ?")
+		) {
+			String nextId = messageId;
+			while (nextId != null) {
+				parentStmt.setString(1, nextId);
+				var rs = parentStmt.executeQuery();
+				if (!rs.next()) break;
+				String inReplyTo = rs.getString(1);
+				nextId = inReplyTo;
+
+				if (inReplyTo != null) {
+					tagStmt.setString(1, inReplyTo);
+					var tagRs = tagStmt.executeQuery();
+					while (tagRs.next()) tags.add(tagRs.getString(1));
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		List<String> tagList = new ArrayList<>(tags);
+		tagList.sort(String::compareToIgnoreCase);
+		return tagList;
+	}
+
+	/**
+	 * Gets the list of all tags in any emails that are children of the given
+	 * email, by using a breadth-first search of all children.
+	 * @param messageId The email to check.
+	 * @return The list of all tags.
+	 */
+	public List<String> getAllChildTags(String messageId) {
+		Set<String> tags = new HashSet<>();
+		Queue<String> messageIdQueue = new LinkedList<>();
+		messageIdQueue.add(messageId);
+		try (
+			var childStmt = conn.prepareStatement("SELECT MESSAGE_ID FROM EMAIL WHERE IN_REPLY_TO = ?");
+			var tagStmt = conn.prepareStatement("SELECT TAG FROM EMAIL_TAG WHERE MESSAGE_ID = ?")
+		) {
+			while (!messageIdQueue.isEmpty()) {
+				childStmt.setString(1, messageIdQueue.remove());
+				var rs = childStmt.executeQuery();
+				while (rs.next()) {
+					String childId = rs.getString(1);
+					tagStmt.setString(1, childId);
+					var tagRs = tagStmt.executeQuery();
+					while (tagRs.next()) {
+						tags.add(tagRs.getString(1));
+					}
+					messageIdQueue.add(childId);
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		List<String> tagList = new ArrayList<>(tags);
+		tagList.sort(String::compareToIgnoreCase);
+		return tagList;
 	}
 
 	public long hideAllEmailsByBody(String body) {
