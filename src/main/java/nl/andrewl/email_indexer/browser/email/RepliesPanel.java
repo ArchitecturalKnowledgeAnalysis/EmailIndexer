@@ -5,6 +5,8 @@ import nl.andrewl.email_indexer.data.EmailRepository;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class RepliesPanel extends JPanel {
 	private final EmailViewPanel parent;
@@ -22,17 +24,20 @@ public class RepliesPanel extends JPanel {
 	}
 
 	public void setEmail(EmailEntry email) {
-		this.buttonPanel.removeAll();
-		if (email == null) return;
-		var repo = new EmailRepository(parent.getCurrentDataset());
-		var replies = repo.findAllReplies(email.messageId());
-		for (var reply : replies) {
-			JButton button = new JButton(reply.subject());
-			button.addActionListener(e -> {
-				SwingUtilities.invokeLater(() -> parent.navigateTo(reply.messageId()));
-			});
-			this.buttonPanel.add(button);
+		List<JButton> buttonsToAdd = new ArrayList<>();
+		if (email != null) {
+			var repo = new EmailRepository(parent.getCurrentDataset());
+			var replies = repo.findAllReplies(email.messageId());
+			for (var reply : replies) {
+				JButton button = new JButton("<html><strong>%s</strong><br>by <em>%s</em></html>".formatted(reply.subject(), reply.sentFrom()));
+				button.addActionListener(e -> {
+					SwingUtilities.invokeLater(() -> parent.navigateTo(reply.messageId()));
+				});
+				buttonsToAdd.add(button);
+			}
 		}
-		this.buttonPanel.repaint();
+		buttonPanel.removeAll();
+		buttonsToAdd.forEach(buttonPanel::add);
+		buttonPanel.repaint();
 	}
 }

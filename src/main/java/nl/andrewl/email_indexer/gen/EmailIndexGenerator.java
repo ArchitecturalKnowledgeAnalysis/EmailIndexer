@@ -12,17 +12,17 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class EmailIndexGenerator {
-	public void generateIndex(Path inputDir, Path outputDir, EmailHandler... emailHandlers) throws IOException {
+	public void generateIndex(Collection<Path> inputDirs, Path outputDir, EmailHandler... emailHandlers) throws IOException {
 		Files.createDirectories(outputDir);
 		Directory emailDirectory = FSDirectory.open(outputDir);
 		Analyzer analyzer = new StandardAnalyzer();
@@ -47,10 +47,11 @@ public class EmailIndexGenerator {
 			var handler = new CompositeEmailHandler(new IndexingEmailHandler(emailIndexWriter));
 			for (var h : emailHandlers) handler.withHandler(h);
 			MBoxParser parser = new MBoxParser(new FilterTransformEmailHandler(handler, filters, transformers));
-			try (var s = Files.list(inputDir)) {
-				for (var p : s.toList()) parser.parse(p);
+			for (var dir : inputDirs) {
+				try (var s = Files.list(dir)) {
+					for (var p : s.toList()) parser.parse(p);
+				}
 			}
 		}
-
 	}
 }

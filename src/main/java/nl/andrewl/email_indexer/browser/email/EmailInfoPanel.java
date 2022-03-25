@@ -1,11 +1,13 @@
 package nl.andrewl.email_indexer.browser.email;
 
 import nl.andrewl.email_indexer.data.EmailEntry;
+import nl.andrewl.email_indexer.data.EmailRepository;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 public class EmailInfoPanel extends JPanel {
 	private final EmailViewPanel parent;
@@ -87,9 +89,20 @@ public class EmailInfoPanel extends JPanel {
 			this.subjectLabel.setText(email.subject());
 			this.dateLabel.setText(email.date().format(DateTimeFormatter.ofPattern("dd MMMM, yyyy HH:mm:ss Z")));
 			this.sentFromLabel.setText(email.sentFrom());
-			String inReplyToButtonText = email.inReplyTo() == null || email.inReplyTo().isBlank() ? "None" : email.inReplyTo();
+			String inReplyToButtonText;
+			Optional<EmailEntry> inReplyTo = Optional.empty();
+			if (parent.getCurrentDataset() != null) {
+				inReplyTo = new EmailRepository(parent.getCurrentDataset()).findEmailById(email.inReplyTo());
+			}
+			if (email.inReplyTo() == null || email.inReplyTo().isBlank() || inReplyTo.isEmpty()) {
+				inReplyToButtonText = "None";
+				inReplyToButton.setEnabled(false);
+			} else {
+				var parentEmail = inReplyTo.get();
+				inReplyToButtonText = "<html><strong>%s</strong><br>by <em>%s</em></html>".formatted(parentEmail.subject(), parentEmail.sentFrom());
+				inReplyToButton.setEnabled(true);
+			}
 			this.inReplyToButton.setText(inReplyToButtonText);
-			this.inReplyToButton.setEnabled(email.inReplyTo() != null && !email.inReplyTo().isBlank());
 			if (inReplyToActionListener != null) inReplyToButton.removeActionListener(inReplyToActionListener);
 			inReplyToActionListener = e -> {
 				SwingUtilities.invokeLater(() -> parent.navigateTo(email.inReplyTo()));

@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ForkJoinPool;
@@ -18,19 +19,28 @@ import java.util.concurrent.ForkJoinPool;
  * or more mbox files, and an Apache Lucene index directory. It is stored on the
  * disk as a ZIP file.
  */
-public class EmailDataset implements AutoCloseable {
+public class EmailDataset {
 	private final Path openDir;
 	private final Path dsFile;
-	private final Connection dbConn;
+	private Connection dbConn;
 
-	public EmailDataset(Path openDir, Path dsFile, Connection dbConn) {
+	public EmailDataset(Path openDir, Path dsFile) throws SQLException {
 		this.openDir = openDir;
 		this.dsFile = dsFile;
-		this.dbConn = dbConn;
+		establishConnection();
+	}
+
+	public void establishConnection() throws SQLException {
+		if (this.dbConn != null && !this.dbConn.isClosed()) return;
+		this.dbConn = DriverManager.getConnection(getJdbcUrl(openDir.resolve("database.mv.db")));
 	}
 
 	public Connection getConnection() {
 		return this.dbConn;
+	}
+
+	public Path getOpenDir() {
+		return this.openDir;
 	}
 
 	public Path getIndexDir() {
@@ -41,8 +51,7 @@ public class EmailDataset implements AutoCloseable {
 		return this.openDir.resolve("database.mv.db");
 	}
 
-	@Override
-	public void close() throws Exception {
+	public void close() throws SQLException {
 		this.dbConn.close();
 	}
 
@@ -59,15 +68,13 @@ public class EmailDataset implements AutoCloseable {
 					if (!Files.exists(dsFile.resolve("index")) || !Files.exists(dsFile.resolve("database.mv.db"))) {
 						throw new IOException("Invalid dataset directory.");
 					}
-					Connection dbConn = DriverManager.getConnection(getJdbcUrl(dsFile.resolve("database.mv.db")));
-					cf.complete(new EmailDataset(dsFile, dsFile.getParent().resolve(dsFile.getFileName().toString() + ".zip"), dbConn));
+					cf.complete(new EmailDataset(dsFile, dsFile.getParent().resolve(dsFile.getFileName().toString() + ".zip")));
 				} else {
 					Path openDir = Files.createTempDirectory(Path.of("."), "email-dataset");
 					var zip = new ZipFile(dsFile.toFile());
 					zip.extractAll(openDir.toAbsolutePath().toString());
 					zip.close();
-					Connection dbConn = DriverManager.getConnection(getJdbcUrl(openDir.resolve("database.mv.db")));
-					cf.complete(new EmailDataset(openDir, dsFile, dbConn));
+					cf.complete(new EmailDataset(openDir, dsFile));
 				}
 			} catch (Exception e) {
 				cf.completeExceptionally(e);
