@@ -15,7 +15,7 @@ public class SearchPanel extends JPanel {
 	private int currentPage = 1;
 
 	private final JTextField searchField = new JTextField(0);
-	private final JButton searchButton = new JButton("Search");
+	private final JButton searchButton = new JButton("Lucene Search");
 	private final JComboBox<Boolean> showHiddenComboBox = new JComboBox<>(new Boolean[]{null, true, false});
 	private final JComboBox<Boolean> showTaggedComboBox = new JComboBox<>(new Boolean[]{null, true, false});
 	private final JButton nextPageButton = new JButton("Next Page");
@@ -114,6 +114,7 @@ public class SearchPanel extends JPanel {
 				showResults(results);
 			}
 		});
+		searchButton.setToolTipText("Search email threads using Lucene indexes.");
 		searchPanel.add(textSearchPanel);
 
 		JPanel filterPanel = new JPanel(new GridLayout(0, 2, 5, 5));

@@ -107,7 +107,7 @@ public class EmailRepository {
 
 	public EmailSearchResult search(String query) {
 		try {
-			var result = new EmailIndexSearcher().search(indexDir, query, 1, 10000);
+			var result = new EmailIndexSearcher().search(indexDir, query, 1, 100000);
 			List<EmailEntryPreview> entries = new ArrayList<>(result.size());
 			for (var messageId : result.resultIds()) {
 				findRootEmailByChildId(messageId).ifPresent(preview -> {
@@ -117,7 +117,7 @@ public class EmailRepository {
 			return EmailSearchResult.of(entries, result.page(), result.size(), result.totalResultsCount());
 		} catch (IOException | ParseException e) {
 			e.printStackTrace();
-			return EmailSearchResult.of(new ArrayList<>(), 1, 10000, 0);
+			return EmailSearchResult.of(new ArrayList<>(), 1, 100000, 0);
 		}
 	}
 
