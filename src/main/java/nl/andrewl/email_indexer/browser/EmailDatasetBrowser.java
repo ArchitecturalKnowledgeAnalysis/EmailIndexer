@@ -1,10 +1,7 @@
 package nl.andrewl.email_indexer.browser;
 
 import nl.andrewl.email_indexer.browser.control.*;
-import nl.andrewl.email_indexer.browser.control.email.HideAction;
-import nl.andrewl.email_indexer.browser.control.email.HideAllByAuthorAction;
-import nl.andrewl.email_indexer.browser.control.email.HideAllByBodyAction;
-import nl.andrewl.email_indexer.browser.control.email.ShowAction;
+import nl.andrewl.email_indexer.browser.control.email.*;
 import nl.andrewl.email_indexer.browser.email.EmailViewPanel;
 import nl.andrewl.email_indexer.data.EmailDataset;
 
@@ -13,6 +10,9 @@ import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
+/**
+ * The main JFrame for the dataset browser application.
+ */
 public class EmailDatasetBrowser extends JFrame {
 	private final EmailViewPanel emailViewPanel;
 	private final SearchPanel searchPanel;
@@ -74,6 +74,7 @@ public class EmailDatasetBrowser extends JFrame {
 		filterMenu.add(new JMenuItem(new ShowAction(emailViewPanel)));
 		filterMenu.add(new JMenuItem(new HideAllByAuthorAction(emailViewPanel)));
 		filterMenu.add(new JMenuItem(new HideAllByBodyAction(emailViewPanel)));
+		filterMenu.add(new JMenuItem(new DeleteHiddenAction(emailViewPanel)));
 
 		menuBar.add(filterMenu);
 

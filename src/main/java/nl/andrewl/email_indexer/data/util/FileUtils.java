@@ -18,4 +18,13 @@ public class FileUtils {
 	public static boolean isDirEmpty(Path dir) {
 		return getFileCount(dir) == 0;
 	}
+
+	public static boolean dirContainsFileType(Path dir, String type) {
+		try (var s = Files.walk(dir)) {
+			return s.anyMatch(p -> Files.isRegularFile(p) && p.getFileName().toString().toLowerCase().endsWith(type));
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
 }

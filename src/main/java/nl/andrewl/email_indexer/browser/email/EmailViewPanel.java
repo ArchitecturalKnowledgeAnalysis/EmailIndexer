@@ -56,7 +56,9 @@ public class EmailViewPanel extends JPanel {
 
 	public void setEmail(EmailEntry email) {
 		this.email = email;
-		listeners.forEach(l -> l.emailUpdated(email));
+		listeners.forEach(l -> {
+			SwingUtilities.invokeLater(() -> l.emailUpdated(email));
+		});
 	}
 
 	public void fetchAndSetEmail(String messageId) {

@@ -7,7 +7,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 
+/**
+ * A panel that shows a list of all replies to an email.
+ */
 public class RepliesPanel extends JPanel implements EmailViewListener {
 	private final EmailViewPanel parent;
 
@@ -23,23 +27,25 @@ public class RepliesPanel extends JPanel implements EmailViewListener {
 		this.add(scrollPane, BorderLayout.CENTER);
 	}
 
-	public void setEmail(EmailEntry email) {
-		List<JButton> buttonsToAdd = new ArrayList<>();
+	private void setEmail(EmailEntry email) {
+		buttonPanel.removeAll();
 		if (email != null) {
-			var repo = new EmailRepository(parent.getCurrentDataset());
-			var replies = repo.findAllReplies(email.messageId());
-			for (var reply : replies) {
-				JButton button = new JButton("<html><strong>%s</strong><br>by <em>%s</em></html>".formatted(reply.subject(), reply.sentFrom()));
-				button.addActionListener(e -> SwingUtilities.invokeLater(() -> parent.navigateTo(reply.messageId())));
-				buttonsToAdd.add(button);
-			}
+			ForkJoinPool.commonPool().execute(() -> {
+				var repo = new EmailRepository(parent.getCurrentDataset());
+				var replies = repo.findAllReplies(email.messageId());
+				List<JButton> buttonsToAdd = new ArrayList<>();
+				for (var reply : replies) {
+					JButton button = new JButton("<html><strong>%s</strong><br>by <em>%s</em></html>".formatted(reply.subject(), reply.sentFrom()));
+					button.addActionListener(e -> SwingUtilities.invokeLater(() -> parent.navigateTo(reply.messageId())));
+					buttonsToAdd.add(button);
+				}
+				SwingUtilities.invokeLater(() -> {
+					for (var button : buttonsToAdd) buttonPanel.add(button);
+					this.revalidate();
+					this.repaint();
+				});
+			});
 		}
-		SwingUtilities.invokeLater(() -> {
-			buttonPanel.removeAll();
-			buttonsToAdd.forEach(buttonPanel::add);
-			System.out.println(buttonPanel.getComponents().length);
-			buttonPanel.repaint();
-		});
 	}
 
 	@Override

@@ -299,4 +299,8 @@ public class EmailRepository {
 				sentFrom
 		);
 	}
+
+	public void deleteAllHidden() {
+		update(conn, "DELETE FROM EMAIL WHERE HIDDEN = TRUE");
+	}
 }

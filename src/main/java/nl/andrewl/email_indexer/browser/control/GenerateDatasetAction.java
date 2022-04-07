@@ -7,7 +7,6 @@ import nl.andrewl.email_indexer.gen.EmailDatasetGenerator;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.AbstractMap;
@@ -49,25 +48,17 @@ public class GenerateDatasetAction extends AbstractAction {
 				paths.add(mboxDirsList.getModel().getElementAt(i));
 			}
 			Path dsDir = datasetDirField.getSelectedPath();
-			SwingUtils.setAllButtonsEnabled(dialog, false);
-			datasetDirField.setEnabled(false);
-			dialog.setTitle("Generating...");
-			try {
-				new EmailDatasetGenerator().generate(paths, dsDir)
-						.thenRun(() -> {
-							JOptionPane.showMessageDialog(dialog, "Dataset generated!");
-							dialog.dispose();
-						});
-			} catch (Exception ex) {
-				ex.printStackTrace();
-				JOptionPane.showMessageDialog(
-						dialog,
-						"An error occurred while generating the dataset:\n" + ex.getMessage(),
-						"Error",
-						JOptionPane.ERROR_MESSAGE
-				);
-				dialog.dispose();
-			}
+			dialog.dispose();
+			ProgressDialog progressDialog = new ProgressDialog(browser, "Generating...", "Generating the dataset.");
+			progressDialog.activate();
+			new EmailDatasetGenerator().generate(paths, dsDir, progressDialog).handle((unused, throwable) -> {
+				progressDialog.done();
+				if (throwable != null) {
+					throwable.printStackTrace();
+					progressDialog.accept("An exception occurred: " + throwable.getMessage());
+				}
+				return null;
+			});
 		});
 		buttonPanel.add(generateButton);
 		buttonPanel.add(cancelButton);
@@ -96,25 +87,15 @@ public class GenerateDatasetAction extends AbstractAction {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				Path mboxDir = fc.getSelectedFile().toPath();
 				if (!mboxDirsListModel.contains(mboxDir)) {
-					try (var s = Files.list(mboxDir)) {
-						if (s.noneMatch(file -> file.getFileName().toString().toLowerCase().endsWith(".mbox"))) {
-							JOptionPane.showMessageDialog(
-									fc,
-									"This directory doesn't contain any MBox files.",
-									"No Mbox Files",
-									JOptionPane.WARNING_MESSAGE
-							);
-						} else {
-							mboxDirsListModel.addElement(mboxDir);
-						}
-					} catch (IOException ex) {
-						ex.printStackTrace();
+					if (!FileUtils.dirContainsFileType(mboxDir, ".mbox")) {
 						JOptionPane.showMessageDialog(
 								fc,
-								"An error occurred while scanning the directory for MBox files:\n" + ex.getMessage(),
-								"Error",
-								JOptionPane.ERROR_MESSAGE
+								"This directory doesn't contain any MBox files.",
+								"No Mbox Files",
+								JOptionPane.WARNING_MESSAGE
 						);
+					} else {
+						mboxDirsListModel.addElement(mboxDir);
 					}
 				}
 			}

@@ -5,6 +5,7 @@ import nl.andrewl.email_indexer.data.EmailRepository;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Panel that's used to manage the tags belonging to a single email entry. It
@@ -78,7 +79,7 @@ public class TagPanel extends JPanel implements EmailViewListener {
 		this.add(buttonPanel, BorderLayout.SOUTH);
 	}
 
-	public void setEmail(EmailEntry email) {
+	private void setEmail(EmailEntry email) {
 		this.email = email;
 		this.tagListModel.clear();
 		this.tagComboBoxModel.removeAllElements();
@@ -86,10 +87,17 @@ public class TagPanel extends JPanel implements EmailViewListener {
 		this.childTagListModel.removeAllElements();
 		if (email != null) {
 			this.tagListModel.addAll(email.tags());
-			var repo = new EmailRepository(parent.getCurrentDataset());
-			this.tagComboBoxModel.addAll(repo.getAllTags());
-			this.parentTagListModel.addAll(repo.getAllParentTags(email.messageId()));
-			this.childTagListModel.addAll(repo.getAllChildTags(email.messageId()));
+			ForkJoinPool.commonPool().execute(() -> {
+				var repo = new EmailRepository(parent.getCurrentDataset());
+				var tags = repo.getAllTags();
+				var parentTags = repo.getAllParentTags(email.messageId());
+				var childTags = repo.getAllChildTags(email.messageId());
+				SwingUtilities.invokeLater(() -> {
+					this.tagComboBoxModel.addAll(tags);
+					this.parentTagListModel.addAll(parentTags);
+					this.childTagListModel.addAll(childTags);
+				});
+			});
 		}
 	}
 

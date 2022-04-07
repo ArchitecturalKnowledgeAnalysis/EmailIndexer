@@ -24,7 +24,8 @@ public class SanitizingEmailHandler implements EmailHandler {
 
 		this.filterFunctions = new ArrayList<>();
 		filterFunctions.add(email -> email.charset != null);
-		filterFunctions.add(email -> email.body.length > 0);
+		filterFunctions.add(email -> email.body != null && email.body.length > 0);
+		filterFunctions.add(email -> email.messageId != null && !email.messageId.isBlank());
 
 		this.transformers = new ArrayList<>();
 		transformers.add(email -> {
