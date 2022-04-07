@@ -2,7 +2,6 @@ package nl.andrewl.email_indexer.data;
 
 import nl.andrewl.email_indexer.EmailIndexSearcher;
 import nl.andrewl.email_indexer.data.util.ConditionBuilder;
-import nl.andrewl.email_indexer.data.util.DbUtils;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
@@ -11,6 +10,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.*;
+
+import static nl.andrewl.email_indexer.data.util.DbUtils.*;
 
 public class EmailRepository {
 	private final Connection conn;
@@ -26,15 +27,15 @@ public class EmailRepository {
 	}
 
 	public long countEmails() {
-		return DbUtils.count(conn, "SELECT COUNT(MESSAGE_ID) FROM EMAIL");
+		return count(conn, "SELECT COUNT(MESSAGE_ID) FROM EMAIL");
 	}
 
 	public long countTags() {
-		return DbUtils.count(conn, "SELECT COUNT(TAG) FROM EMAIL_TAG");
+		return count(conn, "SELECT COUNT(TAG) FROM EMAIL_TAG");
 	}
 
 	public long countTaggedEmails() {
-		return DbUtils.count(conn, "SELECT COUNT(DISTINCT MESSAGE_ID) FROM EMAIL_TAG");
+		return count(conn, "SELECT COUNT(DISTINCT MESSAGE_ID) FROM EMAIL_TAG");
 	}
 
 	public Optional<EmailEntry> findEmailById(String messageId) {
@@ -67,15 +68,13 @@ public class EmailRepository {
 	}
 
 	public List<EmailEntryPreview> findAllReplies(String messageId) {
-		List<EmailEntryPreview> entries = new ArrayList<>();
-		try (var stmt = conn.prepareStatement(QueryCache.load("/sql/fetch_email_preview_by_in_reply_to.sql"))) {
-			stmt.setString(1, messageId);
-			var rs = stmt.executeQuery();
-			while (rs.next()) entries.add(new EmailEntryPreview(rs));
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return entries;
+		return fetch(
+				conn,
+				QueryCache.load("/sql/fetch_email_preview_by_in_reply_to.sql"),
+				EmailEntryPreview::new,
+				messageId
+		);
+
 	}
 
 	public Optional<EmailEntryPreview> findRootEmailByChildId(String messageId) {
@@ -127,7 +126,7 @@ public class EmailRepository {
 		try (var stmt = conn.prepareStatement(q)) {
 			var rs = stmt.executeQuery();
 			while (rs.next()) entries.add(new EmailEntryPreview(rs));
-			long totalResultCount = DbUtils.count(conn, getSearchCountQuery(hidden, tagged));
+			long totalResultCount = count(conn, getSearchCountQuery(hidden, tagged));
 			return EmailSearchResult.of(entries, page, size, totalResultCount);
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -166,37 +165,17 @@ public class EmailRepository {
 	}
 
 	public boolean hasTag(String messageId, String tag) {
-		try (var stmt = conn.prepareStatement("SELECT COUNT(TAG) FROM EMAIL_TAG WHERE MESSAGE_ID = ? AND TAG = ?")) {
-			stmt.setString(1, messageId);
-			stmt.setString(2, tag);
-			var rs = stmt.executeQuery();
-			if (rs.next()) return rs.getLong(1) > 0;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return false;
+		return count(conn, "SELECT COUNT(TAG) FROM EMAIL_TAG WHERE MESSAGE_ID = ? AND TAG = ?", messageId, tag) > 0;
 	}
 
 	public void addTag(String messageId, String tag) {
 		if (!hasTag(messageId, tag)) {
-			try (var stmt = conn.prepareStatement("INSERT INTO EMAIL_TAG (MESSAGE_ID, TAG) VALUES (?, ?)")) {
-				stmt.setString(1, messageId);
-				stmt.setString(2, tag);
-				stmt.executeUpdate();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
+			update(conn, "INSERT INTO EMAIL_TAG (MESSAGE_ID, TAG) VALUES (?, ?)", messageId, tag);
 		}
 	}
 
 	public void removeTag(String messageId, String tag) {
-		try (var stmt = conn.prepareStatement("DELETE FROM EMAIL_TAG WHERE MESSAGE_ID = ? AND TAG = ?")) {
-			stmt.setString(1, messageId);
-			stmt.setString(2, tag);
-			stmt.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+		update(conn, "DELETE FROM EMAIL_TAG WHERE MESSAGE_ID = ? AND TAG = ?", messageId, tag);
 	}
 
 	/**
@@ -204,14 +183,7 @@ public class EmailRepository {
 	 * @return The list of all tags.
 	 */
 	public List<String> getAllTags() {
-		List<String> tags = new ArrayList<>();
-		try (var stmt = conn.prepareStatement("SELECT DISTINCT TAG FROM EMAIL_TAG ORDER BY TAG")) {
-			var rs = stmt.executeQuery();
-			while (rs.next()) tags.add(rs.getString(1));
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return tags;
+		return fetch(conn, "SELECT DISTINCT TAG FROM EMAIL_TAG ORDER BY TAG", rs -> rs.getString(1));
 	}
 
 	/**
@@ -282,23 +254,49 @@ public class EmailRepository {
 		return tagList;
 	}
 
-	public long hideAllEmailsByBody(String body) {
-		try (var stmt = conn.prepareStatement("UPDATE EMAIL SET HIDDEN = TRUE WHERE BODY LIKE ?")) {
-			stmt.setString(1, body);
-			return stmt.executeUpdate();
+	public void hideEmail(String messageId) {
+		update(conn, "UPDATE EMAIL SET HIDDEN = TRUE WHERE MESSAGE_ID = ?", messageId);
+	}
+
+	public void showEmail(String messageId) {
+		update(conn, "UPDATE EMAIL SET HIDDEN = FALSE WHERE MESSAGE_ID = ?", messageId);
+	}
+
+	private int hideEmailsByQuery(String msg, String conditions, Object... args) {
+		try {
+			conn.setAutoCommit(false);
+			List<String> ids = fetch(conn, "SELECT MESSAGE_ID FROM EMAIL WHERE " + conditions, rs -> rs.getString(1), args);
+			long mId = insertWithId(conn, "INSERT INTO MUTATION (DESCRIPTION) VALUES (?)", msg);
+			try (var stmt = conn.prepareStatement("INSERT INTO MUTATION_EMAIL(MUTATION_ID, MESSAGE_ID) VALUES (?, ?)")) {
+				stmt.setLong(1, mId);
+				for (var id : ids) {
+					stmt.setString(2, id);
+					stmt.executeUpdate();
+				}
+			}
+			int count = update(conn, "UPDATE EMAIL SET HIDDEN = TRUE WHERE " + conditions, args);
+			conn.commit();
+			conn.setAutoCommit(true);
+			return count;
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return 0;
 		}
 	}
 
-	public long hideAllEmailsBySentFrom(String sentFrom) {
-		try (var stmt = conn.prepareStatement("UPDATE EMAIL SET HIDDEN = TRUE WHERE SENT_FROM LIKE ?")) {
-			stmt.setString(1, sentFrom);
-			return stmt.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return 0;
-		}
+	public int hideAllEmailsByBody(String body) {
+		return hideEmailsByQuery(
+				"Hiding all emails with a body like: \n\n" + body,
+				"HIDDEN = FALSE AND BODY LIKE ?",
+				body
+		);
+	}
+
+	public int hideAllEmailsBySentFrom(String sentFrom) {
+		return hideEmailsByQuery(
+				"Hiding all emails sent by email addresses like: " + sentFrom,
+				"HIDDEN = FALSE AND SENT_FROM LIKE ?",
+				sentFrom
+		);
 	}
 }

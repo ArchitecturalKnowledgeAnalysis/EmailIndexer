@@ -1,5 +1,7 @@
 package nl.andrewl.email_indexer.browser.email;
 
+import nl.andrewl.email_indexer.browser.control.SwingUtils;
+
 import javax.swing.*;
 import java.awt.*;
 import java.util.Random;
@@ -9,7 +11,6 @@ import java.util.Random;
  * a random color determined by the hashcode of its name.
  */
 public class TagListCellRenderer implements ListCellRenderer<String> {
-	private final Random random = new Random();
 	private final JLabel label = new JLabel();
 
 	public TagListCellRenderer() {
@@ -19,12 +20,7 @@ public class TagListCellRenderer implements ListCellRenderer<String> {
 
 	@Override
 	public Component getListCellRendererComponent(JList<? extends String> list, String value, int index, boolean isSelected, boolean cellHasFocus) {
-		// Generate color based on hash of name.
-		random.setSeed(value.hashCode());
-		float hue = random.nextFloat();
-		float saturation = random.nextFloat() / 4f + 0.75f;
-		float luminance = 0.9f;
-		Color foregroundColor = Color.getHSBColor(hue, saturation, luminance);
+		Color foregroundColor = SwingUtils.getColor(value);
 
 		label.setText(value);
 		label.setForeground(foregroundColor);

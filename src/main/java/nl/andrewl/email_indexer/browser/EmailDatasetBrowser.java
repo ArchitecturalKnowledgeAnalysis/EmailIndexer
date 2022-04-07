@@ -1,8 +1,10 @@
 package nl.andrewl.email_indexer.browser;
 
-import nl.andrewl.email_indexer.browser.control.DatasetOpenAction;
-import nl.andrewl.email_indexer.browser.control.ExportDatasetAction;
-import nl.andrewl.email_indexer.browser.control.GenerateDatasetAction;
+import nl.andrewl.email_indexer.browser.control.*;
+import nl.andrewl.email_indexer.browser.control.email.HideAction;
+import nl.andrewl.email_indexer.browser.control.email.HideAllByAuthorAction;
+import nl.andrewl.email_indexer.browser.control.email.HideAllByBodyAction;
+import nl.andrewl.email_indexer.browser.control.email.ShowAction;
 import nl.andrewl.email_indexer.browser.email.EmailViewPanel;
 import nl.andrewl.email_indexer.data.EmailDataset;
 
@@ -19,11 +21,10 @@ public class EmailDatasetBrowser extends JFrame {
 	public EmailDatasetBrowser () {
 		super("Email Dataset Browser");
 		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
-		this.setJMenuBar(buildMenu());
-
 		this.emailViewPanel = new EmailViewPanel();
 		this.searchPanel = new SearchPanel(emailViewPanel);
 		this.setContentPane(buildUi());
+		this.setJMenuBar(buildMenu());
 		this.setPreferredSize(new Dimension(1000, 600));
 		this.pack();
 		this.setLocationRelativeTo(null);
@@ -66,8 +67,15 @@ public class EmailDatasetBrowser extends JFrame {
 		fileMenu.add(new JMenuItem(new DatasetOpenAction(this)));
 		fileMenu.add(new JMenuItem(new GenerateDatasetAction(this)));
 		fileMenu.add(new JMenuItem(new ExportDatasetAction(this)));
-
 		menuBar.add(fileMenu);
+
+		JMenu filterMenu = new JMenu("Filter");
+		filterMenu.add(new JMenuItem(new HideAction(emailViewPanel)));
+		filterMenu.add(new JMenuItem(new ShowAction(emailViewPanel)));
+		filterMenu.add(new JMenuItem(new HideAllByAuthorAction(emailViewPanel)));
+		filterMenu.add(new JMenuItem(new HideAllByBodyAction(emailViewPanel)));
+
+		menuBar.add(filterMenu);
 
 		return menuBar;
 	}

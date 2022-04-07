@@ -26,19 +26,6 @@ public class DownloadEmailsAction extends AbstractAction {
 		inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.PAGE_AXIS));
 		JTextField domainField = new JTextField(0);
 		JTextField listField = new JTextField(0);
-		JTextField dirField = new JTextField(0);
-		dirField.setEditable(false);
-		JButton setDirButton = new JButton("Download to");
-		setDirButton.addActionListener(event -> {
-			JFileChooser fc = new JFileChooser(Path.of(".").toFile());
-			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			int result = fc.showOpenDialog(dialog);
-			if (result == JFileChooser.APPROVE_OPTION) {
-				Path dir = fc.getSelectedFile().toPath();
-				dirField.setText(dir.toAbsolutePath().toString());
-			}
-		});
-
 		JPanel domainPanel = new JPanel(new BorderLayout());
 		domainPanel.add(new JLabel("Domain"), BorderLayout.WEST);
 		domainPanel.add(domainField, BorderLayout.CENTER);
@@ -47,10 +34,8 @@ public class DownloadEmailsAction extends AbstractAction {
 		listPanel.add(new JLabel("List"), BorderLayout.WEST);
 		listPanel.add(listField, BorderLayout.CENTER);
 		inputPanel.add(listPanel);
-		JPanel dirPanel = new JPanel(new BorderLayout());
-		dirPanel.add(dirField, BorderLayout.CENTER);
-		dirPanel.add(setDirButton, BorderLayout.EAST);
-		inputPanel.add(dirPanel);
+		PathSelectField dirField = PathSelectField.directorySelectField();
+		inputPanel.add(dirField);
 
 		p.add(inputPanel, BorderLayout.CENTER);
 
@@ -60,10 +45,10 @@ public class DownloadEmailsAction extends AbstractAction {
 		JButton downloadButton = new JButton("Download");
 		downloadButton.addActionListener(event -> {
 			ApacheMailingListDownloader downloader = new ApacheMailingListDownloader(domainField.getText(), listField.getText());
-			Path outputDir = Path.of(dirField.getText());
+			Path outputDir = dirField.getSelectedPath();
 			domainField.setEditable(false);
 			listField.setEditable(false);
-			setDirButton.setEnabled(false);
+			dirField.setEnabled(false);
 			downloadButton.setEnabled(false);
 			cancelButton.setEnabled(false);
 			dialog.setTitle("Downloading...");

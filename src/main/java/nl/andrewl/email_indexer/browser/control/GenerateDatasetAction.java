@@ -1,6 +1,7 @@
 package nl.andrewl.email_indexer.browser.control;
 
 import nl.andrewl.email_indexer.browser.EmailDatasetBrowser;
+import nl.andrewl.email_indexer.data.util.FileUtils;
 import nl.andrewl.email_indexer.gen.EmailDatasetGenerator;
 
 import javax.swing.*;
@@ -33,23 +34,8 @@ public class GenerateDatasetAction extends AbstractAction {
 		inputPanel.add(items.getKey());
 		JList<Path> mboxDirsList = items.getValue();
 
-		JPanel datasetDirPanel = new JPanel(new BorderLayout());
-		JTextField datasetDirField = new JTextField(0);
-		datasetDirField.setEditable(false);
-		JButton datasetDirButton = new JButton("Generate to");
-		datasetDirButton.addActionListener(event -> {
-			JFileChooser fc = new JFileChooser(Path.of(".").toFile());
-			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			int result = fc.showSaveDialog(browser);
-			if (result == JFileChooser.APPROVE_OPTION) {
-				Path dsDir = fc.getSelectedFile().toPath();
-				datasetDirField.setText(dsDir.toAbsolutePath().toString());
-			}
-		});
-		datasetDirPanel.add(datasetDirButton, BorderLayout.EAST);
-		datasetDirPanel.add(datasetDirField, BorderLayout.CENTER);
-		inputPanel.add(datasetDirPanel);
-
+		PathSelectField datasetDirField = PathSelectField.directorySelectField();
+		inputPanel.add(datasetDirField);
 		p.add(inputPanel, BorderLayout.CENTER);
 
 		JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -57,39 +43,30 @@ public class GenerateDatasetAction extends AbstractAction {
 		cancelButton.addActionListener(event -> dialog.dispose());
 		JButton generateButton = new JButton("Generate");
 		generateButton.addActionListener(event -> {
-			int size = mboxDirsList.getModel().getSize();
-			if (size < 1) {
+			if (!validateDialog(dialog, mboxDirsList, datasetDirField)) return;
+			Collection<Path> paths = new ArrayList<>();
+			for (int i = 0; i < mboxDirsList.getModel().getSize(); i++) {
+				paths.add(mboxDirsList.getModel().getElementAt(i));
+			}
+			Path dsDir = datasetDirField.getSelectedPath();
+			SwingUtils.setAllButtonsEnabled(dialog, false);
+			datasetDirField.setEnabled(false);
+			dialog.setTitle("Generating...");
+			try {
+				new EmailDatasetGenerator().generate(paths, dsDir)
+						.thenRun(() -> {
+							JOptionPane.showMessageDialog(dialog, "Dataset generated!");
+							dialog.dispose();
+						});
+			} catch (Exception ex) {
+				ex.printStackTrace();
 				JOptionPane.showMessageDialog(
 						dialog,
-						"No MBox directories have been added.",
-						"No MBox Directories",
-						JOptionPane.WARNING_MESSAGE
+						"An error occurred while generating the dataset:\n" + ex.getMessage(),
+						"Error",
+						JOptionPane.ERROR_MESSAGE
 				);
-			} else {
-				Collection<Path> paths = new ArrayList<>();
-				for (int i = 0; i < size; i++) {
-					paths.add(mboxDirsList.getModel().getElementAt(i));
-				}
-				Path dsDir = Path.of(datasetDirField.getText());
-				generateButton.setEnabled(false);
-				cancelButton.setEnabled(false);
-				dialog.setTitle("Generating...");
-				try {
-					new EmailDatasetGenerator().generate(paths, dsDir)
-							.thenRun(() -> {
-								JOptionPane.showMessageDialog(dialog, "Dataset generated!");
-								dialog.dispose();
-							});
-				} catch (Exception ex) {
-					ex.printStackTrace();
-					JOptionPane.showMessageDialog(
-							dialog,
-							"An error occurred while generating the dataset:\n" + ex.getMessage(),
-							"Error",
-							JOptionPane.ERROR_MESSAGE
-					);
-					dialog.dispose();
-				}
+				dialog.dispose();
 			}
 		});
 		buttonPanel.add(generateButton);
@@ -112,7 +89,9 @@ public class GenerateDatasetAction extends AbstractAction {
 		JButton addMboxDirButton = new JButton("Add Mbox Directory");
 		addMboxDirButton.addActionListener(event -> {
 			JFileChooser fc = new JFileChooser(Path.of(".").toFile());
+			fc.setFileFilter(new DirectoryFileFilter());
 			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			fc.setAcceptAllFileFilterUsed(false);
 			int result = fc.showOpenDialog(browser);
 			if (result == JFileChooser.APPROVE_OPTION) {
 				Path mboxDir = fc.getSelectedFile().toPath();
@@ -148,5 +127,28 @@ public class GenerateDatasetAction extends AbstractAction {
 		mboxDirsPanel.add(mboxDirsButtonPanel, BorderLayout.SOUTH);
 
 		return new AbstractMap.SimpleEntry<>(mboxDirsPanel, mboxDirsList);
+	}
+
+	private boolean validateDialog(JDialog dialog, JList<Path> mboxDirsList, PathSelectField datasetDirField) {
+		if (mboxDirsList.getModel().getSize() < 1) {
+			JOptionPane.showMessageDialog(
+					dialog,
+					"No MBox directories have been added.",
+					"No MBox Directories",
+					JOptionPane.WARNING_MESSAGE
+			);
+			return false;
+		}
+		Path datasetDir = datasetDirField.getSelectedPath();
+		if (datasetDir == null || !Files.isDirectory(datasetDir) || !FileUtils.isDirEmpty(datasetDir)) {
+			JOptionPane.showMessageDialog(
+					dialog,
+					"You must select an empty directory to generate the dataset in.",
+					"Invalid Dataset Directory",
+					JOptionPane.WARNING_MESSAGE
+			);
+			return false;
+		}
+		return true;
 	}
 }

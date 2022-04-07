@@ -9,7 +9,11 @@ import java.awt.event.ActionListener;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
-public class EmailInfoPanel extends JPanel {
+/**
+ * A panel that shows some auxiliary details about an email, aside from the main
+ * body of the email.
+ */
+public class EmailInfoPanel extends JPanel implements EmailViewListener {
 	private final EmailViewPanel parent;
 
 	private final JLabel messageIdLabel = new JLabel();
@@ -26,9 +30,14 @@ public class EmailInfoPanel extends JPanel {
 		this.parent = parent;
 		this.tagPanel = new TagPanel(parent);
 		this.tagPanel.setPreferredSize(new Dimension(-1, 200));
+		parent.addListener(tagPanel);
 		this.repliesPanel = new RepliesPanel(parent);
 		this.repliesPanel.setPreferredSize(new Dimension(-1, 200));
+		parent.addListener(repliesPanel);
+		buildUI();
+	}
 
+	private void buildUI() {
 		GridBagConstraints labelConstraint = new GridBagConstraints();
 		labelConstraint.anchor = GridBagConstraints.FIRST_LINE_START;
 		labelConstraint.weightx = 0.01;
@@ -100,7 +109,11 @@ public class EmailInfoPanel extends JPanel {
 		} else {
 			this.inReplyToButton.setEnabled(false);
 		}
-		this.tagPanel.setEmail(email);
-		this.repliesPanel.setEmail(email);
+	}
+
+	@Override
+	public void emailUpdated(EmailEntry email) {
+		setEmail(email);
+		setVisible(email != null);
 	}
 }

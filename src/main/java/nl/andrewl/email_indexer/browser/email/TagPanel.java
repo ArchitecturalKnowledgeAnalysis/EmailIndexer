@@ -4,14 +4,13 @@ import nl.andrewl.email_indexer.data.EmailEntry;
 import nl.andrewl.email_indexer.data.EmailRepository;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 import java.awt.*;
 
 /**
  * Panel that's used to manage the tags belonging to a single email entry. It
  * shows the list of tags, and provides facilities to modify that list.
  */
-public class TagPanel extends JPanel {
+public class TagPanel extends JPanel implements EmailViewListener {
 	private final EmailViewPanel parent;
 	private final DefaultListModel<String> tagListModel = new DefaultListModel<>();
 	private final DefaultListModel<String> parentTagListModel = new DefaultListModel<>();
@@ -23,7 +22,7 @@ public class TagPanel extends JPanel {
 	public TagPanel(EmailViewPanel parent) {
 		super(new BorderLayout());
 		this.parent = parent;
-		this.add(new JLabel("Tags"), BorderLayout.NORTH);
+		this.setBorder(BorderFactory.createTitledBorder("Tags"));
 		this.removeButton.setEnabled(false);
 
 		JPanel centerPanel = new JPanel(new GridLayout(0, 2));
@@ -53,10 +52,11 @@ public class TagPanel extends JPanel {
 
 		this.add(centerPanel, BorderLayout.CENTER);
 
-		JPanel buttonPanel = new JPanel();
+		JPanel buttonPanel = new JPanel(new BorderLayout());
 		JComboBox<String> tagComboBox = new JComboBox<>(this.tagComboBoxModel);
 		tagComboBox.setEditable(true);
-		buttonPanel.add(tagComboBox);
+		buttonPanel.add(tagComboBox, BorderLayout.CENTER);
+		JPanel buttonCtlPanel = new JPanel();
 		JButton addButton = new JButton("Add");
 		addButton.addActionListener(e -> {
 			String tag = (String) tagComboBox.getSelectedItem();
@@ -65,7 +65,7 @@ public class TagPanel extends JPanel {
 				parent.refresh();
 			}
 		});
-		buttonPanel.add(addButton);
+		buttonCtlPanel.add(addButton);
 		removeButton.addActionListener(e -> {
 			var repo = new EmailRepository(parent.getCurrentDataset());
 			for (var tag : tagList.getSelectedValuesList()) {
@@ -73,7 +73,8 @@ public class TagPanel extends JPanel {
 			}
 			parent.refresh();
 		});
-		buttonPanel.add(removeButton);
+		buttonCtlPanel.add(removeButton);
+		buttonPanel.add(buttonCtlPanel, BorderLayout.EAST);
 		this.add(buttonPanel, BorderLayout.SOUTH);
 	}
 
@@ -90,5 +91,10 @@ public class TagPanel extends JPanel {
 			this.parentTagListModel.addAll(repo.getAllParentTags(email.messageId()));
 			this.childTagListModel.addAll(repo.getAllChildTags(email.messageId()));
 		}
+	}
+
+	@Override
+	public void emailUpdated(EmailEntry email) {
+		setEmail(email);
 	}
 }

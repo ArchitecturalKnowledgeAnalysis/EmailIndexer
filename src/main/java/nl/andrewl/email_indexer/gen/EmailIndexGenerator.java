@@ -1,7 +1,6 @@
 package nl.andrewl.email_indexer.gen;
 
 import nl.andrewl.mbox_parser.CompositeEmailHandler;
-import nl.andrewl.mbox_parser.Email;
 import nl.andrewl.mbox_parser.EmailHandler;
 import nl.andrewl.mbox_parser.MBoxParser;
 import org.apache.lucene.analysis.Analyzer;
@@ -12,44 +11,42 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
+/**
+ * Component which parses a set of mbox files to produce a Lucene index.
+ */
 public class EmailIndexGenerator {
 	public void generateIndex(Collection<Path> inputDirs, Path outputDir, EmailHandler... emailHandlers) throws IOException {
 		Files.createDirectories(outputDir);
 		Directory emailDirectory = FSDirectory.open(outputDir);
 		Analyzer analyzer = new StandardAnalyzer();
 		IndexWriterConfig config = new IndexWriterConfig(analyzer);
-		List<Function<Email, Boolean>> filters = new ArrayList<>();
-		filters.add(email -> email.charset != null);
-		List<Consumer<Email>> transformers = new ArrayList<>();
-		transformers.add(email -> {
-			String[] lines = email.readBodyAsText().split("\n");
-			StringBuilder sb = new StringBuilder(email.body.length);
-			for (var line : lines) {
-				if (!line.trim().startsWith(">")) {
-					sb.append(line).append("\n");
-				}
-			}
-			email.body = sb.toString().getBytes(StandardCharsets.UTF_8);
-			email.charset = StandardCharsets.UTF_8.name();
-			email.transferEncoding = "8bit";
-		});
 
 		try (IndexWriter emailIndexWriter = new IndexWriter(emailDirectory, config)) {
-			var handler = new CompositeEmailHandler(new IndexingEmailHandler(emailIndexWriter));
-			for (var h : emailHandlers) handler.withHandler(h);
-			MBoxParser parser = new MBoxParser(new FilterTransformEmailHandler(handler, filters, transformers));
+			// Create a composite handler that has a collection of handlers that are called for each email parsed.
+			var compositeHandler = new CompositeEmailHandler(new IndexingEmailHandler(emailIndexWriter));
+			for (var h : emailHandlers) compositeHandler.withHandler(h);
+			// Wrap the composite handler in a sanitizing handler to filter out plain junk.
+			MBoxParser parser = new MBoxParser(new SanitizingEmailHandler(compositeHandler));
 			for (var dir : inputDirs) {
-				try (var s = Files.list(dir)) {
-					for (var p : s.toList()) parser.parse(p);
+				parseRecursive(dir, parser);
+			}
+		}
+	}
+
+	private void parseRecursive(Path dir, MBoxParser parser) throws IOException {
+		System.out.println("Parsing directory: " + dir);
+		try (var s = Files.list(dir)) {
+			for (var p : s.toList()) {
+				if (Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS)) {
+					parseRecursive(p, parser);
+				} else if (Files.isRegularFile(p, LinkOption.NOFOLLOW_LINKS) && Files.isReadable(p)) {
+					System.out.println("Parsing file: " + p);
+					parser.parse(p);
 				}
 			}
 		}

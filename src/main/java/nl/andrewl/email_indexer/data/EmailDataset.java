@@ -20,13 +20,18 @@ import java.util.concurrent.ForkJoinPool;
  * disk as a ZIP file.
  */
 public class EmailDataset {
+	/**
+	 * The directory that this dataset resides in.
+	 */
 	private final Path openDir;
-	private final Path dsFile;
+
+	/**
+	 * The database connection used by this dataset, while it's open.
+	 */
 	private Connection dbConn;
 
-	public EmailDataset(Path openDir, Path dsFile) throws SQLException {
+	public EmailDataset(Path openDir) throws SQLException {
 		this.openDir = openDir;
-		this.dsFile = dsFile;
 		establishConnection();
 	}
 
@@ -66,15 +71,25 @@ public class EmailDataset {
 			try {
 				if (Files.isDirectory(dsFile)) {
 					if (!Files.exists(dsFile.resolve("index")) || !Files.exists(dsFile.resolve("database.mv.db"))) {
-						throw new IOException("Invalid dataset directory.");
+						throw new IOException("Invalid dataset directory. A dataset must contain an \"index\" directory, and a \"database.mv.db\" file.");
 					}
-					cf.complete(new EmailDataset(dsFile, dsFile.getParent().resolve(dsFile.getFileName().toString() + ".zip")));
-				} else {
-					Path openDir = Files.createTempDirectory(Path.of("."), "email-dataset");
+					cf.complete(new EmailDataset(dsFile));
+				} else if (dsFile.getFileName().toString().toLowerCase().endsWith(".zip")) {
+					String filename = dsFile.getFileName().toString();
+					String dirName = filename.substring(0, filename.lastIndexOf('.'));
+					// Add '_' prefix until we have a new directory that doesn't exist yet.
+					Path openDir = dsFile.resolveSibling(dirName);
+					while (Files.exists(openDir)) {
+						dirName = "_" + dirName;
+						openDir = dsFile.resolveSibling(dirName);
+					}
+					Files.createDirectory(openDir);
 					var zip = new ZipFile(dsFile.toFile());
 					zip.extractAll(openDir.toAbsolutePath().toString());
 					zip.close();
-					cf.complete(new EmailDataset(openDir, dsFile));
+					cf.complete(new EmailDataset(openDir));
+				} else {
+					throw new IOException("Invalid file.");
 				}
 			} catch (Exception e) {
 				cf.completeExceptionally(e);
