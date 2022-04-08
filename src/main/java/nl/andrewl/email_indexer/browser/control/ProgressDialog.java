@@ -1,6 +1,7 @@
 package nl.andrewl.email_indexer.browser.control;
 
 import javax.swing.*;
+import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.util.function.Consumer;
 
@@ -9,17 +10,24 @@ import java.util.function.Consumer;
  * periodically posting messages to the dialog's log text component.
  */
 public class ProgressDialog extends JDialog implements Consumer<String> {
-	private final JTextPane textPane = new JTextPane();
+	private final JTextArea textBox = new JTextArea();
 	private final JButton doneButton = new JButton("Done");
 
 	public ProgressDialog(Window owner, String title, String description) {
 		super(owner, title, ModalityType.APPLICATION_MODAL);
 
 		JPanel p = new JPanel(new BorderLayout());
-		p.add(new JLabel(description), BorderLayout.NORTH);
-		textPane.setPreferredSize(new Dimension(500, 400));
-		textPane.setEditable(false);
-		JScrollPane scrollPane = new JScrollPane(textPane, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+		if (description != null) {
+			p.add(new JLabel(description), BorderLayout.NORTH);
+		}
+		textBox.setEditable(false);
+		textBox.setWrapStyleWord(true);
+		textBox.setLineWrap(true);
+		textBox.setFont(new Font("monospaced", textBox.getFont().getStyle(), 12));
+		DefaultCaret caret = (DefaultCaret) textBox.getCaret();
+		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+		JScrollPane scrollPane = new JScrollPane(textBox, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+		scrollPane.setPreferredSize(new Dimension(500, 400));
 		p.add(scrollPane, BorderLayout.CENTER);
 
 		JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -43,8 +51,8 @@ public class ProgressDialog extends JDialog implements Consumer<String> {
 
 	public synchronized void append(String msg) {
 		SwingUtilities.invokeLater(() -> {
-			textPane.setText(textPane.getText() + "\n" + msg);
-			textPane.setCaretPosition(textPane.getText().length());
+			textBox.setText(textBox.getText() + "\n" + msg);
+			textBox.setCaretPosition(textBox.getText().length());
 		});
 	}
 
