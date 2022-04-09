@@ -41,14 +41,16 @@ public class TagPanel extends JPanel implements EmailViewListener {
 		JPanel otherTagsPanel = new JPanel(new GridLayout(2, 0));
 		JList<String> parentTagList = new JList<>(this.parentTagListModel);
 		parentTagList.setCellRenderer(new TagListCellRenderer());
-		parentTagList.setBorder(BorderFactory.createTitledBorder("Parent Tags"));
 		parentTagList.setEnabled(false);
+		JScrollPane parentTagScrollPane = new JScrollPane(parentTagList);
+		parentTagScrollPane.setBorder(BorderFactory.createTitledBorder("Parent Tags"));
+		otherTagsPanel.add(parentTagScrollPane);
 		JList<String> childTagList = new JList<>(this.childTagListModel);
 		childTagList.setCellRenderer(new TagListCellRenderer());
-		childTagList.setBorder(BorderFactory.createTitledBorder("Child Tags"));
 		childTagList.setEnabled(false);
-		otherTagsPanel.add(parentTagList);
-		otherTagsPanel.add(childTagList);
+		JScrollPane childTagScrollPane = new JScrollPane(childTagList);
+		childTagScrollPane.setBorder(BorderFactory.createTitledBorder("Child Tags"));
+		otherTagsPanel.add(childTagScrollPane);
 		centerPanel.add(otherTagsPanel);
 
 		this.add(centerPanel, BorderLayout.CENTER);

@@ -3,6 +3,7 @@ package nl.andrewl.email_indexer.browser;
 import nl.andrewl.email_indexer.browser.control.*;
 import nl.andrewl.email_indexer.browser.control.email.*;
 import nl.andrewl.email_indexer.browser.email.EmailViewPanel;
+import nl.andrewl.email_indexer.browser.search.SimpleBrowsePanel;
 import nl.andrewl.email_indexer.data.EmailDataset;
 
 import javax.swing.*;
@@ -15,15 +16,23 @@ import java.awt.event.WindowEvent;
  */
 public class EmailDatasetBrowser extends JFrame {
 	private final EmailViewPanel emailViewPanel;
-	private final SearchPanel searchPanel;
+	private final SimpleBrowsePanel browsePanel;
 	private EmailDataset currentDataset = null;
 
 	public EmailDatasetBrowser () {
 		super("Email Dataset Browser");
 		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
 		this.emailViewPanel = new EmailViewPanel();
-		this.searchPanel = new SearchPanel(emailViewPanel);
-		this.setContentPane(buildUi());
+		this.browsePanel = new SimpleBrowsePanel(emailViewPanel);
+
+		JPanel container = new JPanel(new BorderLayout());
+		container.add(this.emailViewPanel, BorderLayout.CENTER);
+		JTabbedPane searchPane = new JTabbedPane();
+		searchPane.add("Browse", browsePanel);
+		searchPane.add("Lucene Search", new JPanel());
+		container.add(searchPane, BorderLayout.WEST);
+		this.setContentPane(container);
+
 		this.setJMenuBar(buildMenu());
 		this.setPreferredSize(new Dimension(1000, 600));
 		this.pack();
@@ -57,7 +66,7 @@ public class EmailDatasetBrowser extends JFrame {
 			}
 		}
 		this.currentDataset = ds;
-		searchPanel.setDataset(ds);
+		browsePanel.setDataset(ds);
 		emailViewPanel.setDataset(ds);
 	}
 
@@ -79,12 +88,5 @@ public class EmailDatasetBrowser extends JFrame {
 		menuBar.add(filterMenu);
 
 		return menuBar;
-	}
-
-	private Container buildUi() {
-		JPanel container = new JPanel(new BorderLayout());
-		container.add(this.emailViewPanel, BorderLayout.CENTER);
-		container.add(this.searchPanel, BorderLayout.WEST);
-		return container;
 	}
 }

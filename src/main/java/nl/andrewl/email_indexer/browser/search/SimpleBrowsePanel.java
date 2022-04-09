@@ -1,5 +1,6 @@
-package nl.andrewl.email_indexer.browser;
+package nl.andrewl.email_indexer.browser.search;
 
+import nl.andrewl.email_indexer.browser.EmailListItemRenderer;
 import nl.andrewl.email_indexer.browser.email.EmailViewPanel;
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
@@ -9,13 +10,15 @@ import nl.andrewl.email_indexer.data.EmailSearchResult;
 import javax.swing.*;
 import java.awt.*;
 
-public class SearchPanel extends JPanel {
+/**
+ * Panel for browsing the dataset using some filters and a paginated results
+ * list.
+ */
+public class SimpleBrowsePanel extends JPanel {
 	private final DefaultListModel<EmailEntryPreview> emailListModel;
 	private EmailDataset currentDataset;
 	private int currentPage = 1;
 
-	private final JTextField searchField = new JTextField(0);
-	private final JButton searchButton = new JButton("Lucene Search");
 	private final JComboBox<Boolean> showHiddenComboBox = new JComboBox<>(new Boolean[]{null, true, false});
 	private final JComboBox<Boolean> showTaggedComboBox = new JComboBox<>(new Boolean[]{null, true, false});
 	private final JButton nextPageButton = new JButton("Next Page");
@@ -23,7 +26,7 @@ public class SearchPanel extends JPanel {
 	private final JLabel currentPageLabel = new JLabel("Page 1 of 1");
 	private final JLabel sizeLabel = new JLabel("Showing 0 of 0 results");
 
-	public SearchPanel(EmailViewPanel emailViewPanel) {
+	public SimpleBrowsePanel(EmailViewPanel emailViewPanel) {
 		super(new BorderLayout());
 		this.setPreferredSize(new Dimension(400, -1));
 
@@ -49,8 +52,6 @@ public class SearchPanel extends JPanel {
 
 		// Set all elements
 		boolean enabled = ds != null;
-		searchButton.setEnabled(enabled);
-		searchField.setText(null);
 
 		showHiddenComboBox.setSelectedItem(false);
 		showHiddenComboBox.setEnabled(enabled);
@@ -96,26 +97,26 @@ public class SearchPanel extends JPanel {
 		JPanel searchPanel = new JPanel();
 		searchPanel.setLayout(new BoxLayout(searchPanel, BoxLayout.PAGE_AXIS));
 
-		JPanel textSearchPanel = new JPanel(new GridBagLayout());
-		GridBagConstraints c = new GridBagConstraints();
-		c.gridx = 0; c.gridy = 0;
-		c.weightx = 0.99; c.weighty = 0.5;
-		c.anchor = GridBagConstraints.LINE_START;
-		c.fill = GridBagConstraints.BOTH;
-		c.insets = new Insets(2, 2, 2, 2);
-		textSearchPanel.add(searchField, c);
-		c.gridx = 1;
-		c.weightx = 0.01;
-		c.fill = GridBagConstraints.BOTH;
-		textSearchPanel.add(searchButton, c);
-		searchButton.addActionListener(e -> {
-			if (this.currentDataset != null) {
-				var results = new EmailRepository(currentDataset).search(searchField.getText());
-				showResults(results);
-			}
-		});
-		searchButton.setToolTipText("Search email threads using Lucene indexes.");
-		searchPanel.add(textSearchPanel);
+//		JPanel textSearchPanel = new JPanel(new GridBagLayout());
+//		GridBagConstraints c = new GridBagConstraints();
+//		c.gridx = 0; c.gridy = 0;
+//		c.weightx = 0.99; c.weighty = 0.5;
+//		c.anchor = GridBagConstraints.LINE_START;
+//		c.fill = GridBagConstraints.BOTH;
+//		c.insets = new Insets(2, 2, 2, 2);
+//		textSearchPanel.add(searchField, c);
+//		c.gridx = 1;
+//		c.weightx = 0.01;
+//		c.fill = GridBagConstraints.BOTH;
+//		textSearchPanel.add(searchButton, c);
+//		searchButton.addActionListener(e -> {
+//			if (this.currentDataset != null) {
+//				var results = new EmailRepository(currentDataset).search(searchField.getText());
+//				showResults(results);
+//			}
+//		});
+//		searchButton.setToolTipText("Search email threads using Lucene indexes.");
+//		searchPanel.add(textSearchPanel);
 
 		JPanel filterPanel = new JPanel(new GridLayout(0, 2, 5, 5));
 		filterPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));

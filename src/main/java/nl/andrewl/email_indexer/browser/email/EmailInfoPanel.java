@@ -29,10 +29,8 @@ public class EmailInfoPanel extends JPanel implements EmailViewListener {
 		super(new GridBagLayout());
 		this.parent = parent;
 		this.tagPanel = new TagPanel(parent);
-		this.tagPanel.setPreferredSize(new Dimension(-1, 200));
 		parent.addListener(tagPanel);
 		this.repliesPanel = new RepliesPanel(parent);
-		this.repliesPanel.setPreferredSize(new Dimension(-1, 200));
 		parent.addListener(repliesPanel);
 		buildUI();
 	}
@@ -76,9 +74,10 @@ public class EmailInfoPanel extends JPanel implements EmailViewListener {
 		subsectionConstraint.gridwidth = 2;
 		subsectionConstraint.gridy = values.length;
 		subsectionConstraint.insets = new Insets(3, 3, 3, 3);
-		this.add(this.tagPanel, subsectionConstraint);
-		subsectionConstraint.gridy++;
-		this.add(this.repliesPanel, subsectionConstraint);
+		JPanel subPanel = new JPanel(new GridLayout(2, 1));
+		subPanel.add(tagPanel);
+		subPanel.add(repliesPanel);
+		this.add(subPanel, subsectionConstraint);
 	}
 
 	public void setEmail(EmailEntry email) {
