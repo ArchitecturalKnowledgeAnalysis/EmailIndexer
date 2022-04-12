@@ -1,10 +1,7 @@
 package nl.andrewl.email_indexer.data;
 
-import nl.andrewl.email_indexer.EmailIndexSearcher;
 import nl.andrewl.email_indexer.data.util.ConditionBuilder;
-import org.apache.lucene.queryparser.classic.ParseException;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -67,6 +64,18 @@ public class EmailRepository {
 		}
 	}
 
+	public Optional<EmailEntryPreview> findPreviewById(String messageId) {
+		try (var stmt = conn.prepareStatement(QueryCache.load("/sql/fetch_email_preview_by_id.sql"))) {
+			stmt.setString(1, messageId);
+			var rs = stmt.executeQuery();
+			if (!rs.next()) return Optional.empty();
+			return Optional.of(new EmailEntryPreview(rs));
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Optional.empty();
+		}
+	}
+
 	public List<EmailEntryPreview> findAllReplies(String messageId) {
 		return fetch(
 				conn,
@@ -74,7 +83,13 @@ public class EmailRepository {
 				EmailEntryPreview::new,
 				messageId
 		);
+	}
 
+	public void loadRepliesRecursive(EmailEntryPreview entry) {
+		entry.replies().addAll(findAllReplies(entry.messageId()));
+		for (var reply : entry.replies()) {
+			loadRepliesRecursive(reply);
+		}
 	}
 
 	public Optional<EmailEntryPreview> findRootEmailByChildId(String messageId) {
@@ -101,22 +116,6 @@ public class EmailRepository {
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Optional.empty();
-		}
-	}
-
-	public EmailSearchResult search(String query) {
-		try {
-			var result = new EmailIndexSearcher().search(indexDir, query, 1, 100000);
-			List<EmailEntryPreview> entries = new ArrayList<>(result.size());
-			for (var messageId : result.resultIds()) {
-				findRootEmailByChildId(messageId).ifPresent(preview -> {
-					if (!entries.contains(preview) && !preview.hidden()) entries.add(preview);
-				});
-			}
-			return EmailSearchResult.of(entries, result.page(), result.size(), result.totalResultsCount());
-		} catch (IOException | ParseException e) {
-			e.printStackTrace();
-			return EmailSearchResult.of(new ArrayList<>(), 1, 100000, 0);
 		}
 	}
 

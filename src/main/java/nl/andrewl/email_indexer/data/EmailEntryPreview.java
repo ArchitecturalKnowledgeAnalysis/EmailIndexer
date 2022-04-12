@@ -9,7 +9,8 @@ import java.util.List;
 
 /**
  * More concise data about an email entry that is lightweight for use in search
- * results and other places where quick retrieval is necessary.
+ * results and other places where quick retrieval is necessary. The list of
+ * replies is empty by default.
  */
 public record EmailEntryPreview(
 		String messageId,
@@ -17,7 +18,8 @@ public record EmailEntryPreview(
 		String sentFrom,
 		ZonedDateTime date,
 		List<String> tags,
-		boolean hidden
+		boolean hidden,
+		List<EmailEntryPreview> replies
 ) {
 	public EmailEntryPreview (ResultSet rs) throws SQLException {
 		this(
@@ -26,7 +28,8 @@ public record EmailEntryPreview(
 				rs.getString(3),
 				rs.getObject(4, ZonedDateTime.class),
 				new ArrayList<>(),
-				rs.getBoolean(6)
+				rs.getBoolean(6),
+				new ArrayList<>()
 		);
 		String t = rs.getString(5);
 		if (t != null && !t.isEmpty()) {
