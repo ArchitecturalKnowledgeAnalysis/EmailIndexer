@@ -8,6 +8,10 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 
+/**
+ * Component that generates email datasets from a set of directories containing
+ * mbox files.
+ */
 public class EmailDatasetGenerator {
 	/**
 	 * Generates a new Email Dataset using mbox files from a given directory,

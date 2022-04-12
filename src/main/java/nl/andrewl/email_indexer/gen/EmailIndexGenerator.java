@@ -1,8 +1,8 @@
 package nl.andrewl.email_indexer.gen;
 
-import nl.andrewl.mbox_parser.CompositeEmailHandler;
-import nl.andrewl.mbox_parser.EmailHandler;
-import nl.andrewl.mbox_parser.MBoxParser;
+import nl.andrewl.mboxparser.CompositeEmailHandler;
+import nl.andrewl.mboxparser.EmailHandler;
+import nl.andrewl.mboxparser.MBoxParser;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriter;

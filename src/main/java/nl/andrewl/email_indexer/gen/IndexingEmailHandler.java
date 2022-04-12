@@ -1,7 +1,7 @@
 package nl.andrewl.email_indexer.gen;
 
-import nl.andrewl.mbox_parser.Email;
-import nl.andrewl.mbox_parser.EmailHandler;
+import nl.andrewl.mboxparser.Email;
+import nl.andrewl.mboxparser.EmailHandler;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;

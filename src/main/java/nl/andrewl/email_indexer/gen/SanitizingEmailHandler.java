@@ -1,7 +1,7 @@
 package nl.andrewl.email_indexer.gen;
 
-import nl.andrewl.mbox_parser.Email;
-import nl.andrewl.mbox_parser.EmailHandler;
+import nl.andrewl.mboxparser.Email;
+import nl.andrewl.mboxparser.EmailHandler;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
