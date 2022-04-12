@@ -72,7 +72,10 @@ public final class DbUtils {
 			int idx = 1;
 			for (var arg : args) stmt.setObject(idx++, arg);
 			var rs = stmt.executeQuery();
-			while (rs.next()) items.add(mapper.map(rs));
+			while (rs.next()) {
+				var item = mapper.map(rs);
+				items.add(item);
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

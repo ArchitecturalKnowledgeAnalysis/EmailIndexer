@@ -1,5 +1,7 @@
 package nl.andrewl.email_indexer.gen;
 
+import nl.andrewl.email_indexer.gen.transform.AddressCleaner;
+import nl.andrewl.email_indexer.gen.transform.BodyReplyRemover;
 import nl.andrewl.mboxparser.Email;
 import nl.andrewl.mboxparser.EmailHandler;
 
@@ -28,18 +30,8 @@ public class SanitizingEmailHandler implements EmailHandler {
 		filterFunctions.add(email -> email.messageId != null && !email.messageId.isBlank());
 
 		this.transformers = new ArrayList<>();
-		transformers.add(email -> {
-			String[] lines = email.readBodyAsText().split("\n");
-			StringBuilder sb = new StringBuilder(email.body.length);
-			for (var line : lines) {
-				if (!line.trim().startsWith(">")) {
-					sb.append(line).append("\n");
-				}
-			}
-			email.body = sb.toString().getBytes(StandardCharsets.UTF_8);
-			email.charset = StandardCharsets.UTF_8.name();
-			email.transferEncoding = "8bit";
-		});
+		transformers.add(new BodyReplyRemover());
+		transformers.add(new AddressCleaner());
 	}
 
 	@Override
