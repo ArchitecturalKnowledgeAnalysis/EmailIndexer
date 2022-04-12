@@ -8,9 +8,7 @@ import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 
@@ -39,12 +37,23 @@ public class EmailIndexSearcher {
 			TopDocs docs = searcher.search(query, Integer.MAX_VALUE, Sort.RELEVANCE, false);
 			ScoreDoc[] hits = docs.scoreDocs;
 			var repo = new EmailRepository(dataset);
+			Set<String> rootIds = new HashSet<>();
 			for (ScoreDoc hit : hits) {
 				String messageId = searcher.doc(hit.doc).get("id");
-				repo.findPreviewById(messageId).ifPresent(entry -> {
-					if (!entry.hidden()) {
+				repo.findEmailById(messageId).ifPresent(email -> {
+					if (!email.hidden() && email.inReplyTo() == null && !rootIds.contains(email.messageId())) {
+						EmailEntryPreview entry = new EmailEntryPreview(
+								email.messageId(),
+								email.subject(),
+								email.sentFrom(),
+								email.date(),
+								email.tags(),
+								false,
+								new ArrayList<>()
+						);
 						repo.loadRepliesRecursive(entry);
 						entries.add(entry);
+						rootIds.add(email.messageId());
 					}
 				});
 			}
