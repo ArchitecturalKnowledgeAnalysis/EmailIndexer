@@ -40,8 +40,8 @@ public class EmailIndexSearcher {
 			Set<String> rootIds = new HashSet<>();
 			for (ScoreDoc hit : hits) {
 				String messageId = searcher.doc(hit.doc).get("id");
-				repo.findEmailById(messageId).ifPresent(email -> {
-					if (!email.hidden() && email.inReplyTo() == null && !rootIds.contains(email.messageId())) {
+				repo.findRootEmailByChildId(messageId).ifPresent(email -> {
+					if (!email.hidden() && !rootIds.contains(email.messageId())) {
 						EmailEntryPreview entry = new EmailEntryPreview(
 								email.messageId(),
 								email.subject(),
