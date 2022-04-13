@@ -57,6 +57,9 @@ public class EmailDataset {
 	}
 
 	public void close() throws SQLException {
+		try (var stmt = dbConn.prepareStatement("SHUTDOWN COMPACT;")) {
+			stmt.execute();
+		}
 		this.dbConn.close();
 	}
 
