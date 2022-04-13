@@ -12,15 +12,13 @@ import static nl.andrewl.email_indexer.data.util.DbUtils.*;
 
 public class EmailRepository {
 	private final Connection conn;
-	private final Path indexDir;
 
-	public EmailRepository(Connection conn, Path indexDir) {
+	public EmailRepository(Connection conn) {
 		this.conn = conn;
-		this.indexDir = indexDir;
 	}
 
 	public EmailRepository(EmailDataset ds) {
-		this(ds.getConnection(), ds.getIndexDir());
+		this(ds.getConnection());
 	}
 
 	public long countEmails() {
@@ -28,7 +26,7 @@ public class EmailRepository {
 	}
 
 	public long countTags() {
-		return count(conn, "SELECT COUNT(TAG) FROM EMAIL_TAG");
+		return count(conn, "SELECT COUNT(DISTINCT TAG) FROM EMAIL_TAG");
 	}
 
 	public long countTaggedEmails() {
@@ -92,6 +90,17 @@ public class EmailRepository {
 		}
 	}
 
+	public String getBody(String messageId) {
+		try (var stmt = conn.prepareStatement("SELECT BODY FROM EMAIL WHERE MESSAGE_ID = ?")) {
+			stmt.setString(1, messageId);
+			var rs = stmt.executeQuery();
+			if (rs.next()) return rs.getString(1);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 	public Optional<EmailEntryPreview> findRootEmailByChildId(String messageId) {
 		try (var stmt = conn.prepareStatement("SELECT IN_REPLY_TO FROM EMAIL WHERE EMAIL.MESSAGE_ID = ?")) {
 			String nextId = messageId;
@@ -129,7 +138,7 @@ public class EmailRepository {
 			return EmailSearchResult.of(entries, page, size, totalResultCount);
 		} catch (SQLException e) {
 			e.printStackTrace();
-			return EmailSearchResult.of(new ArrayList<>(), 1, size, 0);
+			return EmailSearchResult.of(new ArrayList<>(), 0, size, 0);
 		}
 	}
 
