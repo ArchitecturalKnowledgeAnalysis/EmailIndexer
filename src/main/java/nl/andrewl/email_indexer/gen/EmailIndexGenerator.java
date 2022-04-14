@@ -28,7 +28,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * Component which parses a set of mbox files to produce a Lucene index.
+ * Component that generates Lucene search indexes from various sources.
  */
 public class EmailIndexGenerator {
 	/**
@@ -88,8 +88,7 @@ public class EmailIndexGenerator {
 				for (var email : result.emails()) {
 					if (!emailIds.contains(email.messageId())) {
 						emailIds.add(email.messageId());
-						String body = repo.getBody(email.messageId());
-						if (body != null) {
+						repo.getBody(email.messageId()).ifPresent(body -> {
 							Document doc = new Document();
 							doc.add(new StringField("id", email.messageId(), Field.Store.YES));
 							doc.add(new StringField("subject", email.subject(), Field.Store.NO));
@@ -99,7 +98,7 @@ public class EmailIndexGenerator {
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
-						}
+						});
 					}
 				}
 				if (result.hasNextPage()) {

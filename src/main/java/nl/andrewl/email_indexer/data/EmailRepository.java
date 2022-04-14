@@ -2,14 +2,17 @@ package nl.andrewl.email_indexer.data;
 
 import nl.andrewl.email_indexer.data.util.ConditionBuilder;
 
-import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.function.Consumer;
 
 import static nl.andrewl.email_indexer.data.util.DbUtils.*;
 
+/**
+ * Repository for accessing emails from a dataset.
+ */
 public class EmailRepository {
 	private final Connection conn;
 
@@ -21,18 +24,35 @@ public class EmailRepository {
 		this(ds.getConnection());
 	}
 
+	/**
+	 * Gets the total number of emails in the dataset.
+	 * @return The total number of emails.
+	 */
 	public long countEmails() {
 		return count(conn, "SELECT COUNT(MESSAGE_ID) FROM EMAIL");
 	}
 
+	/**
+	 * Gets the total number of unique tags in the dataset.
+	 * @return The total number of unique tags.
+	 */
 	public long countTags() {
 		return count(conn, "SELECT COUNT(DISTINCT TAG) FROM EMAIL_TAG");
 	}
 
+	/**
+	 * Gets the total number of emails that have at least one tag applied.
+	 * @return The total number of tagged emails.
+	 */
 	public long countTaggedEmails() {
 		return count(conn, "SELECT COUNT(DISTINCT MESSAGE_ID) FROM EMAIL_TAG");
 	}
 
+	/**
+	 * Fetches an email by its unique message id.
+	 * @param messageId The email's id.
+	 * @return An optional that contains the email that was found, if any.
+	 */
 	public Optional<EmailEntry> findEmailById(String messageId) {
 		try (var stmt = conn.prepareStatement(QueryCache.load("/sql/fetch_email_by_id.sql"))) {
 			stmt.setString(1, messageId);
@@ -62,6 +82,12 @@ public class EmailRepository {
 		}
 	}
 
+	/**
+	 * Finds a preview of an email by its unique message id.
+	 * @param messageId The id of the email.
+	 * @return An optional that contains a preview of the email that was found,
+	 * if any.
+	 */
 	public Optional<EmailEntryPreview> findPreviewById(String messageId) {
 		try (var stmt = conn.prepareStatement(QueryCache.load("/sql/fetch_email_preview_by_id.sql"))) {
 			stmt.setString(1, messageId);
@@ -74,6 +100,12 @@ public class EmailRepository {
 		}
 	}
 
+	/**
+	 * Finds all replies for an email identified by the given id.
+	 * @param messageId The email's id.
+	 * @return A list of previews of emails that are replies to the email
+	 * identified by the provided message id.
+	 */
 	public List<EmailEntryPreview> findAllReplies(String messageId) {
 		return fetch(
 				conn,
@@ -83,6 +115,11 @@ public class EmailRepository {
 		);
 	}
 
+	/**
+	 * Recursively populates an email preview's set of replies by searching
+	 * the database and updating the previews set of replies.
+	 * @param entry The email preview to fetch replies for.
+	 */
 	public void loadRepliesRecursive(EmailEntryPreview entry) {
 		entry.replies().addAll(findAllReplies(entry.messageId()));
 		for (var reply : entry.replies()) {
@@ -90,17 +127,30 @@ public class EmailRepository {
 		}
 	}
 
-	public String getBody(String messageId) {
+	/**
+	 * Gets just the body of an email identified by the given id.
+	 * @param messageId The id of the email whose body to get.
+	 * @return The body of the requested email.
+	 */
+	public Optional<String> getBody(String messageId) {
 		try (var stmt = conn.prepareStatement("SELECT BODY FROM EMAIL WHERE MESSAGE_ID = ?")) {
 			stmt.setString(1, messageId);
 			var rs = stmt.executeQuery();
-			if (rs.next()) return rs.getString(1);
+			if (rs.next()) {
+				return Optional.of(rs.getString(1));
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return null;
+		return Optional.empty();
 	}
 
+	/**
+	 * Finds a preview of the root email, given the id of an email somewhere
+	 * in the thread.
+	 * @param messageId The id of the email to get the root of.
+	 * @return The root email, if any was found.
+	 */
 	public Optional<EmailEntryPreview> findRootEmailByChildId(String messageId) {
 		try (var stmt = conn.prepareStatement("SELECT IN_REPLY_TO FROM EMAIL WHERE EMAIL.MESSAGE_ID = ?")) {
 			String nextId = messageId;
@@ -128,6 +178,14 @@ public class EmailRepository {
 		}
 	}
 
+	/**
+	 * Searches over the collection of all emails.
+	 * @param page The page of results to get.
+	 * @param size The size of each page.
+	 * @param hidden Whether to show hidden emails.
+	 * @param tagged Whether to show tagged emails.
+	 * @return A search result.
+	 */
 	public EmailSearchResult findAll(int page, int size, Boolean hidden, Boolean tagged) {
 		List<EmailEntryPreview> entries = new ArrayList<>(size);
 		String q = getSearchQuery(page, size, hidden, tagged);
@@ -172,16 +230,33 @@ public class EmailRepository {
 		return String.format(countQuery, whereCb.build());
 	}
 
+	/**
+	 * Determines if an email has a certain tag.
+	 * @param messageId The id of the email.
+	 * @param tag The tag to check.
+	 * @return True if the email has the tag, or false otherwise.
+	 */
 	public boolean hasTag(String messageId, String tag) {
 		return count(conn, "SELECT COUNT(TAG) FROM EMAIL_TAG WHERE MESSAGE_ID = ? AND TAG = ?", messageId, tag) > 0;
 	}
 
+	/**
+	 * Adds a tag to an email. Does nothing if the email already has the tag.
+	 * @param messageId The id of the email.
+	 * @param tag The tag to add.
+	 */
 	public void addTag(String messageId, String tag) {
 		if (!hasTag(messageId, tag)) {
 			update(conn, "INSERT INTO EMAIL_TAG (MESSAGE_ID, TAG) VALUES (?, ?)", messageId, tag);
 		}
 	}
 
+	/**
+	 * Removes a tag from an email. Does nothing if the email doesn't have the
+	 * tag.
+	 * @param messageId The id of the email.
+	 * @param tag The tag to remove.
+	 */
 	public void removeTag(String messageId, String tag) {
 		update(conn, "DELETE FROM EMAIL_TAG WHERE MESSAGE_ID = ? AND TAG = ?", messageId, tag);
 	}
@@ -262,10 +337,18 @@ public class EmailRepository {
 		return tagList;
 	}
 
+	/**
+	 * Sets an email as hidden.
+	 * @param messageId The id of the email.
+	 */
 	public void hideEmail(String messageId) {
 		update(conn, "UPDATE EMAIL SET HIDDEN = TRUE WHERE MESSAGE_ID = ?", messageId);
 	}
 
+	/**
+	 * Sets an email as not hidden.
+	 * @param messageId The id of the email.
+	 */
 	public void showEmail(String messageId) {
 		update(conn, "UPDATE EMAIL SET HIDDEN = FALSE WHERE MESSAGE_ID = ?", messageId);
 	}
@@ -283,6 +366,7 @@ public class EmailRepository {
 				}
 			}
 			int count = update(conn, "UPDATE EMAIL SET HIDDEN = TRUE WHERE " + conditions, args);
+			update(conn, "UPDATE MUTATION SET AFFECTED_EMAIL_COUNT = ? WHERE ID = ?", mId, count);
 			conn.commit();
 			conn.setAutoCommit(true);
 			return count;
@@ -292,14 +376,24 @@ public class EmailRepository {
 		}
 	}
 
+	/**
+	 * Hides all emails whose body matches the given text.
+	 * @param body The body text to match.
+	 * @return The number of emails that were hidden.
+	 */
 	public int hideAllEmailsByBody(String body) {
 		return hideEmailsByQuery(
-				"Hiding all emails with a body like: \n\n" + body,
+				"Hiding all emails with a body like:\n\n" + body,
 				"HIDDEN = FALSE AND BODY LIKE ?",
 				body
 		);
 	}
 
+	/**
+	 * Hides all emails sent from a given email address.
+	 * @param sentFrom The address to hide emails from.
+	 * @return The number of emails that were hidden.
+	 */
 	public int hideAllEmailsBySentFrom(String sentFrom) {
 		return hideEmailsByQuery(
 				"Hiding all emails sent by email addresses like: " + sentFrom,
@@ -308,7 +402,27 @@ public class EmailRepository {
 		);
 	}
 
+	/**
+	 * Permanently deletes all hidden emails, which can be used to save space.
+	 * It is recommended to call {@link nl.andrewl.email_indexer.gen.EmailIndexGenerator#regenerateIndex(EmailDataset, Consumer)}
+	 * after deleting many emails.
+	 */
 	public void deleteAllHidden() {
-		update(conn, "DELETE FROM EMAIL WHERE HIDDEN = TRUE");
+		int count = update(conn, "DELETE FROM EMAIL WHERE HIDDEN = TRUE");
+		String desc = "Permanently deleting all hidden emails.";
+		update(conn, "INSERT INTO MUTATION (DESCRIPTION, AFFECTED_EMAIL_COUNT) VALUES (?, ?)", desc, count);
+	}
+
+	/**
+	 * Gets a list of all mutations applied to the dataset, ordered from latest
+	 * to earliest.
+	 * @return The list of mutations.
+	 */
+	public List<MutationEntry> getAllMutations() {
+		return fetch(
+				conn,
+				QueryCache.load("/sql/fetch_all_mutations.sql"),
+				MutationEntry::new
+		);
 	}
 }

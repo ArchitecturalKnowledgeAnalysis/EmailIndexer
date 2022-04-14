@@ -2,7 +2,6 @@ package nl.andrewl.email_indexer.data;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.ZipParameters;
-import net.lingala.zip4j.model.enums.CompressionLevel;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,7 +10,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ForkJoinPool;
 
 /**
@@ -66,9 +64,9 @@ public class EmailDataset {
 	/**
 	 * Opens a dataset from the given file.
 	 * @param dsFile The file to open.
-	 * @return A completion stage that completes when the dataset is opened.
+	 * @return A future that completes when the dataset is opened.
 	 */
-	public static CompletionStage<EmailDataset> open(Path dsFile) {
+	public static CompletableFuture<EmailDataset> open(Path dsFile) {
 		CompletableFuture<EmailDataset> cf = new CompletableFuture<>();
 		ForkJoinPool.commonPool().execute(() -> {
 			try {
@@ -108,16 +106,14 @@ public class EmailDataset {
 	 * @param dir The directory to use. It will be deleted by this method.
 	 * @param file The file to place the ZIP file at. If it already exists, it
 	 *             will be overwritten.
-	 * @return A completion stage that completes when the dataset is saved.
+	 * @return A future that completes when the dataset is saved.
 	 */
-	public static CompletionStage<Void> buildZip(Path dir, Path file) {
+	public static CompletableFuture<Void> buildZip(Path dir, Path file) {
 		CompletableFuture<Void> cf = new CompletableFuture<>();
 		ForkJoinPool.commonPool().execute(() -> {
-			var zip = new ZipFile(file.toFile());
 			ZipParameters params = new ZipParameters();
-			params.setCompressionLevel(CompressionLevel.ULTRA);
 			params.setOverrideExistingFilesInZip(true);
-			try {
+			try (var zip = new ZipFile(file.toFile())) {
 				zip.addFolder(dir.resolve("index").toFile(), params);
 				zip.addFile(dir.resolve("database.mv.db").toFile(), params);
 				cf.complete(null);
