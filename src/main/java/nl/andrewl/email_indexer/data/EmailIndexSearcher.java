@@ -8,13 +8,20 @@ import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 
+/**
+ * Component that provides methods for searching for emails using Lucene search
+ * indexes.
+ */
 public class EmailIndexSearcher {
-	public CompletableFuture<List<EmailEntryPreview>> searchAsync(EmailDataset dataset, String queryString) {
-		CompletableFuture<List<EmailEntryPreview>> cf = new CompletableFuture<>();
+	public CompletableFuture<List<String>> searchAsync(EmailDataset dataset, String queryString) {
+		CompletableFuture<List<String>> cf = new CompletableFuture<>();
 		ForkJoinPool.commonPool().submit(() -> {
 			try {
 				cf.complete(search(dataset, queryString));
@@ -25,13 +32,13 @@ public class EmailIndexSearcher {
 		return cf;
 	}
 
-	public List<EmailEntryPreview> search(EmailDataset dataset, String queryString) throws IOException, ParseException {
+	public List<String> search(EmailDataset dataset, String queryString) throws IOException, ParseException {
 		MultiFieldQueryParser queryParser = new MultiFieldQueryParser(
 				new String[]{"subject", "body"},
 				new StandardAnalyzer()
 		);
 		Query query = queryParser.parse(queryString);
-		List<EmailEntryPreview> entries = new ArrayList<>();
+		List<String> rootEmailIds = new ArrayList<>();
 		try (var reader = DirectoryReader.open(FSDirectory.open(dataset.getIndexDir()))) {
 			IndexSearcher searcher = new IndexSearcher(reader);
 			TopDocs docs = searcher.search(query, Integer.MAX_VALUE, Sort.RELEVANCE, false);
@@ -42,22 +49,12 @@ public class EmailIndexSearcher {
 				String messageId = searcher.doc(hit.doc).get("id");
 				repo.findRootEmailByChildId(messageId).ifPresent(email -> {
 					if (!email.hidden() && !rootIds.contains(email.messageId())) {
-						EmailEntryPreview entry = new EmailEntryPreview(
-								email.messageId(),
-								email.subject(),
-								email.sentFrom(),
-								email.date(),
-								email.tags(),
-								false,
-								new ArrayList<>()
-						);
-						repo.loadRepliesRecursive(entry);
-						entries.add(entry);
+						rootEmailIds.add(email.messageId());
 						rootIds.add(email.messageId());
 					}
 				});
 			}
 		}
-		return entries;
+		return rootEmailIds;
 	}
 }
