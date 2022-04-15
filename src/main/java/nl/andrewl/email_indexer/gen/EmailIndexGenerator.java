@@ -48,14 +48,16 @@ public class EmailIndexGenerator {
 				IndexWriter emailIndexWriter = new IndexWriter(emailDirectory, config)
 		) {
 			long count = repo.countAll(false, null);
-			final int pageCount = Runtime.getRuntime().availableProcessors() * 2 - 1;
+			final int pageCount = Runtime.getRuntime().availableProcessors() - 1;
 			int itemsPerPage = (int) (count / pageCount);
 			int remainderItems = (int) (count % pageCount);
 			Set<EmailSearchResult> pages = new HashSet<>();
 			for (int i = 0; i < pageCount; i++) {
 				final int page = i + 1;
+				messageConsumer.accept("Fetching page %d of %d".formatted(page, pageCount + 1));
 				pages.add(repo.findAll(page, itemsPerPage, false, null));
 			}
+			messageConsumer.accept("Fetching page %d".formatted(pageCount + 1));
 			pages.add(repo.findAll(pageCount + 1, remainderItems, false, null));
 			Set<Thread> threads = pages.stream()
 					.map(result -> new Thread(() -> indexPage(result, repo, emailIndexWriter, messageConsumer)))
