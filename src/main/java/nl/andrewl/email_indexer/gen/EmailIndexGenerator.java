@@ -18,9 +18,8 @@ import org.apache.lucene.store.FSDirectory;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -51,28 +50,23 @@ public class EmailIndexGenerator {
 			final int pageCount = Runtime.getRuntime().availableProcessors() - 1;
 			int itemsPerPage = (int) (count / pageCount);
 			int remainderItems = (int) (count % pageCount);
-			ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+			Set<EmailSearchResult> pages = new HashSet<>();
 			for (int i = 0; i < pageCount; i++) {
 				final int page = i + 1;
-				executor.submit(() -> indexPage(page, itemsPerPage, repo, emailIndexWriter, messageConsumer));
+				pages.add(repo.findAll(page, itemsPerPage, false, null));
 			}
-			executor.submit(() -> indexPage(pageCount + 1, remainderItems, repo, emailIndexWriter, messageConsumer));
-			executor.shutdown();
-			try {
-				executor.awaitTermination(120, TimeUnit.SECONDS);
-			} catch (InterruptedException e) {
-				throw new RuntimeException(e);
-			}
+			pages.add(repo.findAll(pageCount + 1, remainderItems, false, null));
+			pages.parallelStream().forEach(result -> indexPage(result, repo, emailIndexWriter, messageConsumer));
 			messageConsumer.accept("Indexing complete.");
 		}
 	}
 
-	private void indexPage(int page, int size, EmailRepository repo, IndexWriter emailIndexWriter, Consumer<String> messageConsumer) {
-		EmailSearchResult result = repo.findAll(page, size, false, null);
-		messageConsumer.accept("Indexing page %d.".formatted(page));
+	private void indexPage(EmailSearchResult result, EmailRepository repo, IndexWriter emailIndexWriter, Consumer<String> messageConsumer) {
+		messageConsumer.accept("Indexing page %d containing %d emails.".formatted(result.page(), result.emails().size()));
 		for (var email : result.emails()) {
 			addToIndex(email, repo, emailIndexWriter);
 		}
+		messageConsumer.accept("Completed index of page %d.".formatted(result.page()));
 	}
 
 	private void addToIndex(EmailEntryPreview email, EmailRepository repo, IndexWriter emailIndexWriter) {
