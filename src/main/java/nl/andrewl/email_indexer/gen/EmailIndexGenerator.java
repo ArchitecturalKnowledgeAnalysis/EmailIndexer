@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Component that generates Lucene search indexes from various sources.
@@ -47,7 +48,7 @@ public class EmailIndexGenerator {
 				IndexWriter emailIndexWriter = new IndexWriter(emailDirectory, config)
 		) {
 			long count = repo.countAll(false, null);
-			final int pageCount = Runtime.getRuntime().availableProcessors() - 1;
+			final int pageCount = Runtime.getRuntime().availableProcessors() * 2 - 1;
 			int itemsPerPage = (int) (count / pageCount);
 			int remainderItems = (int) (count % pageCount);
 			Set<EmailSearchResult> pages = new HashSet<>();
@@ -56,7 +57,18 @@ public class EmailIndexGenerator {
 				pages.add(repo.findAll(page, itemsPerPage, false, null));
 			}
 			pages.add(repo.findAll(pageCount + 1, remainderItems, false, null));
-			pages.parallelStream().forEach(result -> indexPage(result, repo, emailIndexWriter, messageConsumer));
+			Set<Thread> threads = pages.stream()
+					.map(result -> new Thread(() -> indexPage(result, repo, emailIndexWriter, messageConsumer)))
+					.peek(Thread::start)
+					.collect(Collectors.toSet());
+			messageConsumer.accept("Spawned " + threads.size() + " threads to process indexes.");
+			for (var thread : threads) {
+				try {
+					thread.join();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
 			messageConsumer.accept("Indexing complete.");
 		}
 	}
