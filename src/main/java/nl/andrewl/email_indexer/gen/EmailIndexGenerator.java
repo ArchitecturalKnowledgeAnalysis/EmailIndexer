@@ -42,30 +42,37 @@ public class EmailIndexGenerator {
 		Analyzer analyzer = new StandardAnalyzer();
 		IndexWriterConfig config = new IndexWriterConfig(analyzer);
 		EmailRepository repo = new EmailRepository(dataset);
-		Set<String> emailIds = new HashSet<>();
 		try (
 				Directory emailDirectory = FSDirectory.open(dataset.getIndexDir());
 				IndexWriter emailIndexWriter = new IndexWriter(emailDirectory, config)
 		) {
-			int page = 1;
-			EmailSearchResult result = repo.findAll(page, 1000, false, null);
-			// Continue until there are no more pages.
-			while (true) {
-				messageConsumer.accept("Indexing page %d of %d of emails.".formatted(result.page(), result.pageCount()));
-				for (var email : result.emails()) {
-					if (!emailIds.contains(email.messageId())) {
-						emailIds.add(email.messageId());
-						addToIndex(email, repo, emailIndexWriter);
-					}
-				}
-				if (result.hasNextPage()) {
-					page++;
-					result = repo.findAll(page, 1000, false, null);
-				} else {
-					break;
+			long count = repo.countAll(false, null);
+			final int pageCount = Runtime.getRuntime().availableProcessors() - 1;
+			int itemsPerPage = (int) (count / pageCount);
+			int remainderItems = (int) (count % pageCount);
+			Set<Thread> threads = new HashSet<>();
+			for (int i = 0; i < pageCount; i++) {
+				final int page = i + 1;
+				threads.add(new Thread(() -> indexPage(page, itemsPerPage, repo, emailIndexWriter, messageConsumer)));
+			}
+			threads.add(new Thread(() -> indexPage(pageCount + 1, remainderItems, repo, emailIndexWriter, messageConsumer)));
+			threads.forEach(Thread::start);
+			for (Thread thread : threads) {
+				try {
+					thread.join();
+				} catch (InterruptedException e) {
+					throw new RuntimeException(e);
 				}
 			}
 			messageConsumer.accept("Indexing complete.");
+		}
+	}
+
+	private void indexPage(int page, int size, EmailRepository repo, IndexWriter emailIndexWriter, Consumer<String> messageConsumer) {
+		EmailSearchResult result = repo.findAll(page, size, false, null);
+		messageConsumer.accept("Indexing page %d of %d of emails.".formatted(result.page(), result.pageCount()));
+		for (var email : result.emails()) {
+			addToIndex(email, repo, emailIndexWriter);
 		}
 	}
 

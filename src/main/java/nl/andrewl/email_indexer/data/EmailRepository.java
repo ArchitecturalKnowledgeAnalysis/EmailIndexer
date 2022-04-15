@@ -200,6 +200,16 @@ public class EmailRepository {
 		}
 	}
 
+	/**
+	 * Gets a count for emails matching the criteria.
+	 * @param hidden Whether to include hidden emails.
+	 * @param tagged Whether to include tagged emails.
+	 * @return The number of emails.
+	 */
+	public long countAll(Boolean hidden, Boolean tagged) {
+		return count(conn, getSearchCountQuery(hidden, tagged));
+	}
+
 	private String getSearchQuery(int page, int size, Boolean hidden, Boolean tagged) {
 		String queryFormat = """
 			SELECT EMAIL.MESSAGE_ID, SUBJECT, SENT_FROM, DATE, LISTAGG(TAG, ','), HIDDEN
