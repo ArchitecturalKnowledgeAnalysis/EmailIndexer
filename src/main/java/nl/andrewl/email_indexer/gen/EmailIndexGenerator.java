@@ -18,8 +18,9 @@ import org.apache.lucene.store.FSDirectory;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -50,19 +51,17 @@ public class EmailIndexGenerator {
 			final int pageCount = Runtime.getRuntime().availableProcessors() - 1;
 			int itemsPerPage = (int) (count / pageCount);
 			int remainderItems = (int) (count % pageCount);
-			Set<Thread> threads = new HashSet<>();
+			ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 			for (int i = 0; i < pageCount; i++) {
 				final int page = i + 1;
-				threads.add(new Thread(() -> indexPage(page, itemsPerPage, repo, emailIndexWriter, messageConsumer)));
+				executor.submit(() -> indexPage(page, itemsPerPage, repo, emailIndexWriter, messageConsumer));
 			}
-			threads.add(new Thread(() -> indexPage(pageCount + 1, remainderItems, repo, emailIndexWriter, messageConsumer)));
-			threads.forEach(Thread::start);
-			for (Thread thread : threads) {
-				try {
-					thread.join();
-				} catch (InterruptedException e) {
-					throw new RuntimeException(e);
-				}
+			executor.submit(() -> indexPage(pageCount + 1, remainderItems, repo, emailIndexWriter, messageConsumer));
+			executor.shutdown();
+			try {
+				executor.awaitTermination(120, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
 			}
 			messageConsumer.accept("Indexing complete.");
 		}
@@ -70,7 +69,7 @@ public class EmailIndexGenerator {
 
 	private void indexPage(int page, int size, EmailRepository repo, IndexWriter emailIndexWriter, Consumer<String> messageConsumer) {
 		EmailSearchResult result = repo.findAll(page, size, false, null);
-		messageConsumer.accept("Indexing page %d of %d of emails.".formatted(result.page(), result.pageCount()));
+		messageConsumer.accept("Indexing page %d.".formatted(page));
 		for (var email : result.emails()) {
 			addToIndex(email, repo, emailIndexWriter);
 		}
