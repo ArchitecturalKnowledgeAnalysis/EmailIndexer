@@ -1,6 +1,11 @@
 package nl.andrewl.email_indexer.gen;
 
+import nl.andrewl.email_indexer.data.EmailDataset;
+import nl.andrewl.mboxparser.MBoxParser;
+
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -30,11 +35,16 @@ public class EmailDatasetGenerator {
 				messageConsumer.accept("Created dataset directory: " + dsDir);
 				DatabaseGenerator dbGen = new DatabaseGenerator(dsDir.resolve("database"));
 				messageConsumer.accept("Initialized embedded database.");
-				EmailIndexGenerator indexGen = new EmailIndexGenerator();
-				Path indexDir = dsDir.resolve("index");
-				Files.createDirectory(indexDir);
-				indexGen.generateIndex(mboxFileDirs, indexDir, messageConsumer, dbGen);
+				MBoxParser parser = new MBoxParser(new SanitizingEmailHandler(dbGen));
+				for (var dir : mboxFileDirs) {
+					parseRecursive(dir, parser, messageConsumer);
+				}
 				dbGen.close();
+				messageConsumer.accept("All emails added to the database.");
+
+				EmailDataset dataset = new EmailDataset(dsDir);
+				messageConsumer.accept("Generating index.");
+				new EmailIndexGenerator().generateIndex(dataset, messageConsumer);
 				messageConsumer.accept("Dataset generation complete.");
 				cf.complete(null);
 			} catch (Exception e) {
@@ -42,5 +52,19 @@ public class EmailDatasetGenerator {
 			}
 		});
 		return cf;
+	}
+
+	private void parseRecursive(Path dir, MBoxParser parser, Consumer<String> messageConsumer) throws IOException {
+		messageConsumer.accept("Parsing directory: " + dir);
+		try (var s = Files.list(dir)) {
+			for (var p : s.toList()) {
+				if (Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS)) {
+					parseRecursive(p, parser, messageConsumer);
+				} else if (Files.isRegularFile(p, LinkOption.NOFOLLOW_LINKS) && Files.isReadable(p)) {
+					messageConsumer.accept("Parsing file: " + p);
+					parser.parse(p);
+				}
+			}
+		}
 	}
 }
