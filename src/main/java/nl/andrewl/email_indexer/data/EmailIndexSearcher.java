@@ -1,6 +1,7 @@
 package nl.andrewl.email_indexer.data;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -62,15 +63,22 @@ public class EmailIndexSearcher {
 			var repo = new EmailRepository(dataset);
 			Set<String> rootIds = new HashSet<>();
 			for (ScoreDoc hit : hits) {
-				String messageId = searcher.doc(hit.doc).get("id");
-				repo.findRootEmailByChildId(messageId).ifPresent(email -> {
-					if (!email.hidden() && !rootIds.contains(email.messageId())) {
-						rootEmailIds.add(email.messageId());
-						rootIds.add(email.messageId());
-					}
-				});
+				Document doc = searcher.doc(hit.doc);
+				String rootId = doc.get("rootId");
+				if (rootId == null) {
+					String messageId = searcher.doc(hit.doc).get("id");
+					rootId = findRootId(messageId, repo);
+				}
+				if (rootId != null && !rootIds.contains(rootId)) {
+					rootIds.add(rootId);
+					rootEmailIds.add(rootId);
+				}
 			}
 		}
 		return rootEmailIds;
+	}
+
+	private String findRootId(String messageId, EmailRepository repo) {
+		return repo.findRootEmailByChildId(messageId).map(EmailEntryPreview::messageId).orElse(null);
 	}
 }
