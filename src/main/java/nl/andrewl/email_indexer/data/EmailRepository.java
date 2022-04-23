@@ -1,11 +1,13 @@
 package nl.andrewl.email_indexer.data;
 
+import nl.andrewl.email_indexer.data.util.Async;
 import nl.andrewl.email_indexer.data.util.ConditionBuilder;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import static nl.andrewl.email_indexer.data.util.DbUtils.*;
@@ -186,18 +188,20 @@ public class EmailRepository {
 	 * @param tagged Whether to show tagged emails.
 	 * @return A search result.
 	 */
-	public EmailSearchResult findAll(int page, int size, Boolean hidden, Boolean tagged) {
-		List<EmailEntryPreview> entries = new ArrayList<>(size);
-		String q = getSearchQuery(page, size, hidden, tagged);
-		try (var stmt = conn.prepareStatement(q)) {
-			var rs = stmt.executeQuery();
-			while (rs.next()) entries.add(new EmailEntryPreview(rs));
-			long totalResultCount = count(conn, getSearchCountQuery(hidden, tagged));
-			return EmailSearchResult.of(entries, page, size, totalResultCount);
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return EmailSearchResult.of(new ArrayList<>(), 0, size, 0);
-		}
+	public CompletableFuture<EmailSearchResult> findAll(int page, int size, Boolean hidden, Boolean tagged) {
+		return Async.supply(() -> {
+			List<EmailEntryPreview> entries = new ArrayList<>(size);
+			String q = getSearchQuery(page, size, hidden, tagged);
+			try (var stmt = conn.prepareStatement(q)) {
+				var rs = stmt.executeQuery();
+				while (rs.next()) entries.add(new EmailEntryPreview(rs));
+				long totalResultCount = count(conn, getSearchCountQuery(hidden, tagged));
+				return EmailSearchResult.of(entries, page, size, totalResultCount);
+			} catch (SQLException e) {
+				e.printStackTrace();
+				return EmailSearchResult.of(new ArrayList<>(), 0, size, 0);
+			}
+		});
 	}
 
 	/**
