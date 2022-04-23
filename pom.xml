@@ -6,7 +6,7 @@
 
     <groupId>nl.andrewl</groupId>
     <artifactId>emailindexer</artifactId>
-    <version>1.6.7</version>
+    <version>1.6.8</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -16,9 +16,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>nl.andrewl</groupId>
-            <artifactId>mboxparser</artifactId>
-            <version>1.2.2</version>
+            <groupId>com.github.ArchitecturalKnowledgeAnalysis</groupId>
+            <artifactId>MBoxParser</artifactId>
+            <version>v1.2.2</version>
         </dependency>
 
         <dependency>
@@ -43,6 +43,13 @@
             <version>2.10.0</version>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <!-- Setup for deploying to GitHub packages with mvn deploy. -->
     <distributionManagement>
