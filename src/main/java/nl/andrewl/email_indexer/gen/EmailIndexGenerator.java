@@ -55,10 +55,10 @@ public class EmailIndexGenerator {
 			for (int i = 0; i < pageCount; i++) {
 				final int page = i + 1;
 				messageConsumer.accept("Fetching page %d of %d".formatted(page, pageCount + 1));
-				pages.add(repo.findAll(page, itemsPerPage, false, null));
+				pages.add(repo.findAll(page, itemsPerPage, false, null).join());
 			}
 			messageConsumer.accept("Fetching page %d of %d".formatted(pageCount + 1, pageCount + 1));
-			pages.add(repo.findAll(pageCount + 1, remainderItems, false, null));
+			pages.add(repo.findAll(pageCount + 1, remainderItems, false, null).join());
 			Set<Thread> threads = pages.stream()
 					.map(result -> new Thread(() -> indexPage(result, repo, emailIndexWriter, messageConsumer)))
 					.peek(Thread::start)
