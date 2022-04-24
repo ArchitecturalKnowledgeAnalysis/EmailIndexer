@@ -18,7 +18,8 @@ public class ConditionBuilder {
 
 	public enum ClauseType {
 		WHERE("WHERE "),
-		HAVING("HAVING ");
+		HAVING("HAVING "),
+		EXPRESSION("");
 		public final String value;
 		ClauseType(String value) {
 			this.value = value;
@@ -43,13 +44,22 @@ public class ConditionBuilder {
 		return new ConditionBuilder(ClauseType.HAVING, ExpressionType.AND);
 	}
 
+	public static ConditionBuilder andExpression() {
+		return new ConditionBuilder(ClauseType.EXPRESSION, ExpressionType.AND);
+	}
+
+	public static ConditionBuilder orExpression() {
+		return new ConditionBuilder(ClauseType.EXPRESSION, ExpressionType.OR);
+	}
+
 	public ConditionBuilder with(String condition) {
 		this.conditions.add(condition);
 		return this;
 	}
 
 	public String build() {
-		if (conditions.isEmpty()) return "";
-		return clauseType.value + String.join(expressionType.delimiter, conditions);
+		String exp = String.join(expressionType.delimiter, conditions);
+		if (conditions.isEmpty() || exp.isBlank()) return "";
+		return clauseType.value + exp;
 	}
 }

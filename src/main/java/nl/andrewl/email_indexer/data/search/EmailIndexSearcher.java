@@ -1,5 +1,8 @@
-package nl.andrewl.email_indexer.data;
+package nl.andrewl.email_indexer.data.search;
 
+import nl.andrewl.email_indexer.data.EmailDataset;
+import nl.andrewl.email_indexer.data.EmailEntryPreview;
+import nl.andrewl.email_indexer.data.EmailRepository;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;

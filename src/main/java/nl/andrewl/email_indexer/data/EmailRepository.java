@@ -1,13 +1,9 @@
 package nl.andrewl.email_indexer.data;
 
-import nl.andrewl.email_indexer.data.util.Async;
-import nl.andrewl.email_indexer.data.util.ConditionBuilder;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import static nl.andrewl.email_indexer.data.util.DbUtils.*;
@@ -178,70 +174,6 @@ public class EmailRepository {
 			e.printStackTrace();
 			return Optional.empty();
 		}
-	}
-
-	/**
-	 * Searches over the collection of all emails.
-	 * @param page The page of results to get.
-	 * @param size The size of each page.
-	 * @param hidden Whether to show hidden emails.
-	 * @param tagged Whether to show tagged emails.
-	 * @return A search result.
-	 */
-	public CompletableFuture<EmailSearchResult> findAll(int page, int size, Boolean hidden, Boolean tagged) {
-		return Async.supply(() -> {
-			List<EmailEntryPreview> entries = new ArrayList<>(size);
-			String q = getSearchQuery(page, size, hidden, tagged);
-			try (var stmt = conn.prepareStatement(q)) {
-				var rs = stmt.executeQuery();
-				while (rs.next()) entries.add(new EmailEntryPreview(rs));
-				long totalResultCount = count(conn, getSearchCountQuery(hidden, tagged));
-				return EmailSearchResult.of(entries, page, size, totalResultCount);
-			} catch (SQLException e) {
-				e.printStackTrace();
-				return EmailSearchResult.of(new ArrayList<>(), 0, size, 0);
-			}
-		});
-	}
-
-	/**
-	 * Gets a count for emails matching the criteria.
-	 * @param hidden Whether to include hidden emails.
-	 * @param tagged Whether to include tagged emails.
-	 * @return The number of emails.
-	 */
-	public long countAll(Boolean hidden, Boolean tagged) {
-		return count(conn, getSearchCountQuery(hidden, tagged));
-	}
-
-	private String getSearchQuery(int page, int size, Boolean hidden, Boolean tagged) {
-		String queryFormat = """
-			SELECT EMAIL.MESSAGE_ID, SUBJECT, SENT_FROM, DATE, LISTAGG(TAG, ','), HIDDEN
-			FROM EMAIL
-			LEFT JOIN EMAIL_TAG ON EMAIL.MESSAGE_ID = EMAIL_TAG.MESSAGE_ID
-			%s
-			GROUP BY EMAIL.MESSAGE_ID
-			%s
-			ORDER BY EMAIL.DATE DESC
-			LIMIT %d OFFSET %d""";
-		ConditionBuilder whereCb = ConditionBuilder.whereAnd();
-		if (hidden != null) whereCb.with("EMAIL.HIDDEN = " + Boolean.toString(hidden).toUpperCase());
-		ConditionBuilder havingCb = ConditionBuilder.havingAnd();
-		if (tagged != null) havingCb.with("COUNT(EMAIL_TAG.TAG) " + (tagged ? '>' : '=') + " 0");
-		return String.format(queryFormat, whereCb.build(), havingCb.build(), size, (page - 1) * size);
-	}
-
-	private String getSearchCountQuery(Boolean hidden, Boolean tagged) {
-		String countQuery = """
-			SELECT COUNT(EMAIL.MESSAGE_ID)
-			FROM EMAIL
-			%s""";
-		ConditionBuilder whereCb = ConditionBuilder.whereAnd();
-		if (hidden != null) whereCb.with("EMAIL.HIDDEN = " + Boolean.toString(hidden).toUpperCase());
-		if (tagged != null) {
-			whereCb.with("EMAIL.MESSAGE_ID " + (tagged ? "" : "NOT") + " IN (SELECT MESSAGE_ID FROM EMAIL_TAG)");
-		}
-		return String.format(countQuery, whereCb.build());
 	}
 
 	/**

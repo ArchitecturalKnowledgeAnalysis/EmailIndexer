@@ -3,7 +3,10 @@ package nl.andrewl.email_indexer.gen;
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
 import nl.andrewl.email_indexer.data.EmailRepository;
-import nl.andrewl.email_indexer.data.EmailSearchResult;
+import nl.andrewl.email_indexer.data.search.EmailSearchResult;
+import nl.andrewl.email_indexer.data.search.EmailSearcher;
+import nl.andrewl.email_indexer.data.search.SearchFilter;
+import nl.andrewl.email_indexer.data.search.filter.HiddenFilter;
 import nl.andrewl.email_indexer.data.util.FileUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -18,6 +21,7 @@ import org.apache.lucene.store.FSDirectory;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -43,11 +47,14 @@ public class EmailIndexGenerator {
 		Analyzer analyzer = new StandardAnalyzer();
 		IndexWriterConfig config = new IndexWriterConfig(analyzer);
 		EmailRepository repo = new EmailRepository(dataset);
+		EmailSearcher searcher = new EmailSearcher(dataset);
 		try (
 				Directory emailDirectory = FSDirectory.open(dataset.getIndexDir());
 				IndexWriter emailIndexWriter = new IndexWriter(emailDirectory, config)
 		) {
-			long count = repo.countAll(false, null);
+			Collection<SearchFilter> filters = new HashSet<>();
+			filters.add(new HiddenFilter(false));
+			long count = searcher.countAll(filters).join();
 			final int pageCount = Runtime.getRuntime().availableProcessors() - 1;
 			int itemsPerPage = (int) (count / pageCount);
 			int remainderItems = (int) (count % pageCount);
@@ -55,10 +62,10 @@ public class EmailIndexGenerator {
 			for (int i = 0; i < pageCount; i++) {
 				final int page = i + 1;
 				messageConsumer.accept("Fetching page %d of %d".formatted(page, pageCount + 1));
-				pages.add(repo.findAll(page, itemsPerPage, false, null).join());
+				pages.add(searcher.findAll(page, itemsPerPage, filters).join());
 			}
 			messageConsumer.accept("Fetching page %d of %d".formatted(pageCount + 1, pageCount + 1));
-			pages.add(repo.findAll(pageCount + 1, remainderItems, false, null).join());
+			pages.add(searcher.findAll(pageCount + 1, remainderItems, filters).join());
 			Set<Thread> threads = pages.stream()
 					.map(result -> new Thread(() -> indexPage(result, repo, emailIndexWriter, messageConsumer)))
 					.peek(Thread::start)

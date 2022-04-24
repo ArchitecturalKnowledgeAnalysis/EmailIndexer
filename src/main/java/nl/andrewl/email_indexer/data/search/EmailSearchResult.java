@@ -1,4 +1,6 @@
-package nl.andrewl.email_indexer.data;
+package nl.andrewl.email_indexer.data.search;
+
+import nl.andrewl.email_indexer.data.EmailEntryPreview;
 
 import java.util.List;
 
