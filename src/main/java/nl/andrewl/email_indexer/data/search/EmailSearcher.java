@@ -13,8 +13,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static nl.andrewl.email_indexer.data.util.DbUtils.count;
-
 /**
  * A special repository that contains methods dedicated to providing search
  * functionality over the dataset with many filters and options, and
@@ -41,13 +39,15 @@ public class EmailSearcher {
 	public CompletableFuture<EmailSearchResult> findAll(int page, int size, Collection<SearchFilter> filters) {
 		return Async.supply(() -> {
 			List<EmailEntryPreview> entries = new ArrayList<>(size);
-			String q = getSearchQuery(page, size, filters);
-			try (var stmt = conn.prepareStatement(q)) {
-				var rs = stmt.executeQuery();
-				while (rs.next()) entries.add(new EmailEntryPreview(rs));
-				String cq = getSearchCountQuery(filters);
-				long totalResultCount = count(conn, cq);
-				return EmailSearchResult.of(entries, page, size, totalResultCount);
+			try (
+				var queryStmt = conn.prepareStatement(getSearchQuery(page, size, filters));
+				var countStmt = conn.prepareStatement(getSearchCountQuery(filters))
+			) {
+				var queryRs = queryStmt.executeQuery();
+				while (queryRs.next()) entries.add(new EmailEntryPreview(queryRs));
+				var countRs = countStmt.executeQuery();
+				countRs.next();
+				return EmailSearchResult.of(entries, page, size, countRs.getLong(1));
 			} catch (SQLException e) {
 				e.printStackTrace();
 				return EmailSearchResult.of(new ArrayList<>(), 0, size, 0);
