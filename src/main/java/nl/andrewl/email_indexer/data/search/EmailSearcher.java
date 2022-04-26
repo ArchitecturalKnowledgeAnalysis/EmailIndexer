@@ -71,7 +71,7 @@ public class EmailSearcher {
 			LEFT JOIN EMAIL_TAG ON EMAIL.MESSAGE_ID = EMAIL_TAG.MESSAGE_ID
 			%s
 			GROUP BY EMAIL.MESSAGE_ID
-			ORDER BY EMAIL.DATE DESC
+			ORDER BY EMAIL.DATE DESC, EMAIL.MESSAGE_ID ASC
 			LIMIT %d OFFSET %d""";
 		ConditionBuilder whereCb = ConditionBuilder.whereAnd();
 		for (var filter : filters) whereCb.with(filter.getWhereClause());
