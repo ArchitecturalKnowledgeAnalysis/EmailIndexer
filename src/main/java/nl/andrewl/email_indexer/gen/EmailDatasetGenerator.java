@@ -60,7 +60,7 @@ public class EmailDatasetGenerator {
 
 			EmailDataset dataset = new EmailDataset(dsDir);
 			status.sendMessage("Generating index.");
-			new EmailIndexGenerator().generateIndex(dataset);
+			new EmailIndexGenerator(status).generateIndex(dataset);
 			status.sendMessage("Dataset generation complete.");
 		});
 	}
