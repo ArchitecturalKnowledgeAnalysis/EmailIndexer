@@ -33,7 +33,7 @@ public class DatabaseGenerator implements AutoCloseable, EmailHandler {
 		}
 	}
 
-	public void addEmail(Email email) throws SQLException {
+	public synchronized void addEmail(Email email) throws SQLException {
 		// First check that no email with this id exists yet.
 		this.emailExistsStatement.setString(1, email.messageId);
 		var rs = this.emailExistsStatement.executeQuery();

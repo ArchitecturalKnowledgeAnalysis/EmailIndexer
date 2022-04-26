@@ -4,9 +4,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.function.Consumer;
 
-import static nl.andrewl.email_indexer.data.util.DbUtils.*;
+import static nl.andrewl.email_indexer.util.DbUtils.*;
 
 /**
  * Repository for accessing emails from a dataset.
@@ -350,7 +349,7 @@ public class EmailRepository {
 
 	/**
 	 * Permanently deletes all hidden emails, which can be used to save space.
-	 * It is recommended to call {@link nl.andrewl.email_indexer.gen.EmailIndexGenerator#generateIndex(EmailDataset, Consumer)}
+	 * It is recommended to call {@link nl.andrewl.email_indexer.gen.EmailIndexGenerator#generateIndex(EmailDataset)}
 	 * after deleting many emails.
 	 */
 	public void deleteAllHidden() {

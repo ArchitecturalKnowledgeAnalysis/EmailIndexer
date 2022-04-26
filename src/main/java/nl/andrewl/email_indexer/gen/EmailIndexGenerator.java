@@ -7,7 +7,8 @@ import nl.andrewl.email_indexer.data.search.EmailSearchResult;
 import nl.andrewl.email_indexer.data.search.EmailSearcher;
 import nl.andrewl.email_indexer.data.search.SearchFilter;
 import nl.andrewl.email_indexer.data.search.filter.HiddenFilter;
-import nl.andrewl.email_indexer.data.util.FileUtils;
+import nl.andrewl.email_indexer.util.FileUtils;
+import nl.andrewl.email_indexer.util.Status;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -24,21 +25,28 @@ import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
  * Component that generates Lucene search indexes from various sources.
  */
 public class EmailIndexGenerator {
+	private final Status status;
+
+	public EmailIndexGenerator(Status status) {
+		this.status = status;
+	}
+
+	public EmailIndexGenerator() {
+		this(Status.noOp());
+	}
+
 	/**
 	 * Generates the indexes for a dataset, based entirely on non-hidden emails.
 	 * @param dataset The dataset to index.
-	 * @param messageConsumer A consumer to accept messages emitted during the
-	 *                        generation.
 	 * @throws IOException If an error occurs while reading or writing.
 	 */
-	public void generateIndex(EmailDataset dataset, Consumer<String> messageConsumer) throws IOException {
+	public void generateIndex(EmailDataset dataset) throws IOException {
 		if (Files.exists(dataset.getIndexDir())) {
 			FileUtils.deleteFiles(dataset.getIndexDir());
 		} else {
@@ -61,16 +69,16 @@ public class EmailIndexGenerator {
 			Set<EmailSearchResult> pages = new HashSet<>();
 			for (int i = 0; i < pageCount; i++) {
 				final int page = i + 1;
-				messageConsumer.accept("Fetching page %d of %d".formatted(page, pageCount + 1));
+				status.sendMessage("Fetching page %d of %d".formatted(page, pageCount + 1));
 				pages.add(searcher.findAll(page, itemsPerPage, filters).join());
 			}
-			messageConsumer.accept("Fetching page %d of %d".formatted(pageCount + 1, pageCount + 1));
+			status.sendMessage("Fetching page %d of %d".formatted(pageCount + 1, pageCount + 1));
 			pages.add(searcher.findAll(pageCount + 1, remainderItems, filters).join());
 			Set<Thread> threads = pages.stream()
-					.map(result -> new Thread(() -> indexPage(result, repo, emailIndexWriter, messageConsumer)))
+					.map(result -> new Thread(() -> indexPage(result, repo, emailIndexWriter)))
 					.peek(Thread::start)
 					.collect(Collectors.toSet());
-			messageConsumer.accept("Spawned " + threads.size() + " threads to process indexes.");
+			status.sendMessage("Spawned " + threads.size() + " threads to process indexes.");
 			for (var thread : threads) {
 				try {
 					thread.join();
@@ -78,16 +86,16 @@ public class EmailIndexGenerator {
 					e.printStackTrace();
 				}
 			}
-			messageConsumer.accept("Indexing complete.");
+			status.sendMessage("Indexing complete.");
 		}
 	}
 
-	private void indexPage(EmailSearchResult result, EmailRepository repo, IndexWriter emailIndexWriter, Consumer<String> messageConsumer) {
-		messageConsumer.accept("Indexing page %d containing %d emails.".formatted(result.page(), result.emails().size()));
+	private void indexPage(EmailSearchResult result, EmailRepository repo, IndexWriter emailIndexWriter) {
+		status.sendMessage("Indexing page %d containing %d emails.".formatted(result.page(), result.emails().size()));
 		for (var email : result.emails()) {
 			addToIndex(email, repo, emailIndexWriter);
 		}
-		messageConsumer.accept("Completed index of page %d.".formatted(result.page()));
+		status.sendMessage("Completed index of page %d.".formatted(result.page()));
 	}
 
 	private void addToIndex(EmailEntryPreview email, EmailRepository repo, IndexWriter emailIndexWriter) {

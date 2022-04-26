@@ -1,4 +1,4 @@
-package nl.andrewl.email_indexer.data.util;
+package nl.andrewl.email_indexer.util;
 
 import java.util.ArrayList;
 import java.util.List;

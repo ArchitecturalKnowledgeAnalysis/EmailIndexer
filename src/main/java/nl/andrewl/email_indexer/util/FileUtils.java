@@ -1,6 +1,5 @@
-package nl.andrewl.email_indexer.data.util;
+package nl.andrewl.email_indexer.util;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,16 +29,14 @@ public class FileUtils {
 	}
 
 	public static void deleteFiles(Path dir) {
-		try {
-			Files.walk(dir)
-					.filter(Files::isRegularFile)
-					.forEach(path -> {
-						try {
-							Files.delete(path);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					});
+		try (var s = Files.walk(dir)) {
+			s.filter(Files::isRegularFile).forEach(path -> {
+				try {
+					Files.delete(path);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			});
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

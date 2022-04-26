@@ -2,9 +2,9 @@ package nl.andrewl.email_indexer.data.search;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
-import nl.andrewl.email_indexer.data.util.Async;
-import nl.andrewl.email_indexer.data.util.ConditionBuilder;
-import nl.andrewl.email_indexer.data.util.DbUtils;
+import nl.andrewl.email_indexer.util.Async;
+import nl.andrewl.email_indexer.util.ConditionBuilder;
+import nl.andrewl.email_indexer.util.DbUtils;
 
 import java.sql.Connection;
 import java.sql.SQLException;

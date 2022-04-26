@@ -1,4 +1,4 @@
-package nl.andrewl.email_indexer.data.util;
+package nl.andrewl.email_indexer.util;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;

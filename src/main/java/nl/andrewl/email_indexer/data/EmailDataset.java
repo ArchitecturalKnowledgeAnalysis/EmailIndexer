@@ -2,6 +2,7 @@ package nl.andrewl.email_indexer.data;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.ZipParameters;
+import nl.andrewl.email_indexer.util.Async;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,7 +11,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ForkJoinPool;
 
 /**
  * An email dataset is a complete set of emails that have been parsed from one
@@ -28,12 +28,19 @@ public class EmailDataset {
 	 */
 	private Connection dbConn;
 
+	/**
+	 * Constructs a dataset from the given directory which should contain a
+	 * valid dataset. Use {@link EmailDataset#open(Path)} in most cases.
+	 * @param openDir The directory containing the dataset.
+	 * @throws SQLException If a connection to the database could not be
+	 * established.
+	 */
 	public EmailDataset(Path openDir) throws SQLException {
 		this.openDir = openDir;
 		establishConnection();
 	}
 
-	public void establishConnection() throws SQLException {
+	private void establishConnection() throws SQLException {
 		if (this.dbConn != null && !this.dbConn.isClosed()) return;
 		this.dbConn = DriverManager.getConnection(getJdbcUrl(openDir.resolve("database.mv.db")));
 	}
@@ -54,11 +61,19 @@ public class EmailDataset {
 		return this.openDir.resolve("database.mv.db");
 	}
 
-	public void close() throws SQLException {
-		try (var stmt = dbConn.prepareStatement("SHUTDOWN COMPACT;")) {
-			stmt.execute();
-		}
-		this.dbConn.close();
+	/**
+	 * Closes all resources used by this dataset. This involves closing the
+	 * database connection(s), and issuing a COMPACT command which may take
+	 * some time.
+	 * @return A future that completes when the dataset is successfully closed.
+	 */
+	public CompletableFuture<Void> close() {
+		return Async.run(() -> {
+			try (var stmt = dbConn.prepareStatement("SHUTDOWN COMPACT;")) {
+				stmt.execute();
+			}
+			this.dbConn.close();
+		});
 	}
 
 	/**
@@ -67,36 +82,30 @@ public class EmailDataset {
 	 * @return A future that completes when the dataset is opened.
 	 */
 	public static CompletableFuture<EmailDataset> open(Path dsFile) {
-		CompletableFuture<EmailDataset> cf = new CompletableFuture<>();
-		ForkJoinPool.commonPool().execute(() -> {
-			try {
-				if (Files.isDirectory(dsFile)) {
-					if (!Files.exists(dsFile.resolve("index")) || !Files.exists(dsFile.resolve("database.mv.db"))) {
-						throw new IOException("Invalid dataset directory. A dataset must contain an \"index\" directory, and a \"database.mv.db\" file.");
-					}
-					cf.complete(new EmailDataset(dsFile));
-				} else if (dsFile.getFileName().toString().toLowerCase().endsWith(".zip")) {
-					String filename = dsFile.getFileName().toString();
-					String dirName = filename.substring(0, filename.lastIndexOf('.'));
-					// Add '_' prefix until we have a new directory that doesn't exist yet.
-					Path openDir = dsFile.resolveSibling(dirName);
-					while (Files.exists(openDir)) {
-						dirName = "_" + dirName;
-						openDir = dsFile.resolveSibling(dirName);
-					}
-					Files.createDirectory(openDir);
-					var zip = new ZipFile(dsFile.toFile());
-					zip.extractAll(openDir.toAbsolutePath().toString());
-					zip.close();
-					cf.complete(new EmailDataset(openDir));
-				} else {
-					throw new IOException("Invalid file.");
+		return Async.supply(() -> {
+			if (Files.isDirectory(dsFile)) {
+				if (!Files.exists(dsFile.resolve("index")) || !Files.exists(dsFile.resolve("database.mv.db"))) {
+					throw new IOException("Invalid dataset directory. A dataset must contain an \"index\" directory, and a \"database.mv.db\" file.");
 				}
-			} catch (Exception e) {
-				cf.completeExceptionally(e);
+				return new EmailDataset(dsFile);
+			} else if (dsFile.getFileName().toString().toLowerCase().endsWith(".zip")) {
+				String filename = dsFile.getFileName().toString();
+				String dirName = filename.substring(0, filename.lastIndexOf('.'));
+				// Add '_' prefix until we have a new directory that doesn't exist yet.
+				Path openDir = dsFile.resolveSibling(dirName);
+				while (Files.exists(openDir)) {
+					dirName = "_" + dirName;
+					openDir = dsFile.resolveSibling(dirName);
+				}
+				Files.createDirectory(openDir);
+				var zip = new ZipFile(dsFile.toFile());
+				zip.extractAll(openDir.toAbsolutePath().toString());
+				zip.close();
+				return new EmailDataset(openDir);
+			} else {
+				throw new IOException("Invalid file.");
 			}
 		});
-		return cf;
 	}
 
 	/**
@@ -109,19 +118,14 @@ public class EmailDataset {
 	 * @return A future that completes when the dataset is saved.
 	 */
 	public static CompletableFuture<Void> buildZip(Path dir, Path file) {
-		CompletableFuture<Void> cf = new CompletableFuture<>();
-		ForkJoinPool.commonPool().execute(() -> {
+		return Async.run(() -> {
 			ZipParameters params = new ZipParameters();
 			params.setOverrideExistingFilesInZip(true);
 			try (var zip = new ZipFile(file.toFile())) {
 				zip.addFolder(dir.resolve("index").toFile(), params);
 				zip.addFile(dir.resolve("database.mv.db").toFile(), params);
-				cf.complete(null);
-			} catch (IOException e) {
-				cf.completeExceptionally(e);
 			}
 		});
-		return cf;
 	}
 
 	public static String getJdbcUrl(Path dbFile) {
