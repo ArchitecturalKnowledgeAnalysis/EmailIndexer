@@ -17,6 +17,9 @@ public class ZipExporter implements EmailDatasetExporter {
 			if (Files.isDirectory(file)) {
 				throw new IllegalArgumentException("Cannot export dataset to directory: " + file);
 			}
-		}).thenAccept(unused -> EmailDataset.buildZip(ds.getOpenDir(), file));
+		})
+				.thenAccept(unused -> ds.close())
+				.thenAccept(unused -> EmailDataset.buildZip(ds.getOpenDir(), file))
+				.thenCompose(unused -> Async.run(ds::establishConnection));
 	}
 }

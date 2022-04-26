@@ -40,8 +40,8 @@ public class EmailDataset {
 		establishConnection();
 	}
 
-	private void establishConnection() throws SQLException {
-		if (this.dbConn != null && !this.dbConn.isClosed()) return;
+	public void establishConnection() throws SQLException {
+		if (this.dbConn != null) return;
 		this.dbConn = DriverManager.getConnection(getJdbcUrl(openDir.resolve("database.mv.db")));
 	}
 
@@ -73,6 +73,7 @@ public class EmailDataset {
 				stmt.execute();
 			}
 			this.dbConn.close();
+			this.dbConn = null;
 		});
 	}
 
