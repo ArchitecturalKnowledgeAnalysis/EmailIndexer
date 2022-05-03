@@ -102,7 +102,7 @@ public class EmailIndexGenerator {
 		repo.getBody(email.messageId()).ifPresent(body -> {
 			Document doc = new Document();
 			doc.add(new StringField("id", email.messageId(), Field.Store.YES));
-			doc.add(new StringField("subject", email.subject(), Field.Store.NO));
+			doc.add(new Field("subject", email.subject(), TextField.TYPE_NOT_STORED));
 			doc.add(new Field("body", body, TextField.TYPE_NOT_STORED));
 			repo.findRootEmailByChildId(email.messageId()).ifPresent(rootEmail -> {
 				doc.add(new StringField("rootId", rootEmail.messageId(), Field.Store.YES));
