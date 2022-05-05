@@ -47,7 +47,7 @@ public class EmailDatasetGenerator {
 			status.sendMessage("Initialized embedded database.");
 			List<Path> mboxFiles = new ArrayList<>();
 			for (var dir : mboxFileDirs) mboxFiles.addAll(findMboxFiles(dir));
-			status.setTotalSteps(mboxFiles.size());
+			status.setTotalSteps(mboxFiles.size() + 1);
 			status.sendMessage("Found %d files to parse.".formatted(mboxFiles.size()));
 			MBoxParser parser = new MBoxParser(new SanitizingEmailHandler(dbGen));
 			for (var file : mboxFiles) {
@@ -55,6 +55,9 @@ public class EmailDatasetGenerator {
 				parser.parse(file);
 				status.incrementStepsDone();
 			}
+			status.sendMessage("Performing post-processing on parsed emails.");
+			dbGen.postProcess();
+			status.incrementStepsDone();
 			dbGen.close();
 			status.sendMessage("All emails added to the database.");
 

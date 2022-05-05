@@ -48,6 +48,23 @@ public class DatabaseGenerator implements AutoCloseable, EmailHandler {
 		this.emailInsertStatement.executeUpdate();
 	}
 
+	/**
+	 * Performs post-processing steps on the data. This involves the following:
+	 * <ul>
+	 *     <li>Determine and set each email's PARENT_ID, based on their IN_REPLY_TO.</li>
+	 * </ul>
+	 * @throws SQLException If an error occurs.
+	 */
+	public synchronized void postProcess() throws SQLException {
+		String sql = """
+				UPDATE EMAIL E
+				SET E.PARENT_ID = (SELECT ID FROM EMAIL E2 WHERE E2.MESSAGE_ID = E.IN_REPLY_TO)
+				WHERE EXISTS (SELECT * FROM EMAIL E2 WHERE E2.MESSAGE_ID = E.IN_REPLY_TO)""";
+		try (var stmt = conn.prepareStatement(sql)) {
+			stmt.executeUpdate();
+		}
+	}
+
 	@Override
 	public void close() throws Exception {
 		this.emailExistsStatement.close();

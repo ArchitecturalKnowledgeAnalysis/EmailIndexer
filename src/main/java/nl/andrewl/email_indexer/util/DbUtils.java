@@ -66,6 +66,15 @@ public final class DbUtils {
 		T map(ResultSet rs) throws SQLException;
 	}
 
+	/**
+	 * Fetches a list of results from a database.
+	 * @param c The connection to use.
+	 * @param query The query to use.
+	 * @param mapper A mapping function to apply to each row.
+	 * @param args Arguments to supply to the query.
+	 * @return A list of items.
+	 * @param <T> The type of items.
+	 */
 	public static <T> List<T> fetch(Connection c, String query, ResultSetMapper<T> mapper, Object... args) {
 		List<T> items = new ArrayList<>();
 		try (var stmt = c.prepareStatement(query)) {
