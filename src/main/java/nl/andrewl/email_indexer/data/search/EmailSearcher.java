@@ -2,6 +2,7 @@ package nl.andrewl.email_indexer.data.search;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
+import nl.andrewl.email_indexer.data.QueryCache;
 import nl.andrewl.email_indexer.util.Async;
 import nl.andrewl.email_indexer.util.ConditionBuilder;
 import nl.andrewl.email_indexer.util.DbUtils;
@@ -31,7 +32,7 @@ public class EmailSearcher {
 
 	/**
 	 * Searches over the collection of all emails.
-	 * @param page The page of results to get.
+	 * @param page The page of results to get. Starts at 1.
 	 * @param size The size of each page.
 	 * @param filters The filters to apply.
 	 * @return A search result.
@@ -65,22 +66,25 @@ public class EmailSearcher {
 	}
 
 	private String getSearchQuery(int page, int size, Collection<SearchFilter> filters) {
-		String queryFormat = """
-			SELECT EMAIL.MESSAGE_ID, SUBJECT, SENT_FROM, DATE, LISTAGG(TAG, ','), HIDDEN
-			FROM EMAIL
-			LEFT JOIN EMAIL_TAG ON EMAIL.MESSAGE_ID = EMAIL_TAG.MESSAGE_ID
-			%s
-			GROUP BY EMAIL.MESSAGE_ID
-			ORDER BY EMAIL.DATE DESC, EMAIL.MESSAGE_ID ASC
-			LIMIT %d OFFSET %d""";
 		ConditionBuilder whereCb = ConditionBuilder.whereAnd();
 		for (var filter : filters) whereCb.with(filter.getWhereClause());
-		return String.format(queryFormat, whereCb.build(), size, (page - 1) * size);
+		String whereClause = whereCb.build();
+		return String.format(
+				"""
+				%s
+				%s
+				ORDER BY %s
+				LIMIT %d OFFSET %d""",
+				QueryCache.load("/sql/preview/search_query.sql"),
+				whereClause,
+				"EMAIL.DATE DESC, EMAIL.MESSAGE_ID ASC",
+				size, (page - 1) * size
+		);
 	}
 
 	private String getSearchCountQuery(Collection<SearchFilter> filters) {
 		String countQuery = """
-			SELECT COUNT(DISTINCT EMAIL.MESSAGE_ID)
+			SELECT COUNT(EMAIL.ID)
 			FROM EMAIL
 			%s
 			""";

@@ -23,27 +23,67 @@ public class TagRepository {
 		this.conn = ds.getConnection();
 	}
 
+	/**
+	 * Counts the number of tags in the database.
+	 * @return The number of tags.
+	 */
 	public int countTags() {
 		return (int) count(conn, "SELECT COUNT(ID) FROM TAG");
 	}
 
+	/**
+	 * Gets a sorted list of tags for an email id.
+	 * @param emailId The id of the email.
+	 * @return A list of tags for the given email.
+	 */
+	public List<Tag> getTags(long emailId) {
+		return DbUtils.fetch(conn, QueryCache.load("/sql/tag/fetch_tags_by_email_id.sql"), Tag::new, emailId);
+	}
+
+	/**
+	 * Creates a new tag.
+	 * @param name The name of the tag. This should be unique, and not null.
+	 * @param description The description for the tag.
+	 * @return The tag that was created.
+	 */
 	public Tag createTag(String name, String description) {
 		int id = (int) DbUtils.insertWithId(conn, "INSERT INTO TAG (NAME, DESCRIPTION) VALUES (?, ?)", name, description);
 		return new Tag(id, name, description);
 	}
 
+	/**
+	 * Deletes a tag from the database. Note that this also permanently removes
+	 * any trace of this tag being applied to any emails.
+	 * @param id The id of the tag to delete.
+	 */
 	public void deleteTag(long id) {
 		update(conn, "DELETE FROM TAG WHERE ID = ?", id);
 	}
 
+	/**
+	 * Determines whether the given tag exists.
+	 * @param name The name of the tag.
+	 * @return True if it exists, or false if not.
+	 */
 	public boolean tagExists(String name) {
 		return count(conn, "SELECT COUNT(ID) FROM TAG WHERE NAME = ?", name) > 0;
 	}
 
+	/**
+	 * Updates a tag's description.
+	 * @param tagId The id of the tag.
+	 * @param newDescription The new description.
+	 */
 	public void setDescription(long tagId, String newDescription) {
 		update(conn, "UPDATE TAG SET DESCRIPTION = ? WHERE ID = ?", newDescription, tagId);
 	}
 
+	/**
+	 * Updates a tag's name.
+	 * @param tagId The id of the tag.
+	 * @param newName The new name. This should not be null, and it should be
+	 *                unique. No other tag should exist. {@link TagRepository#tagExists(String)}
+	 */
 	public void setName(long tagId, String newName) {
 		update(conn, "UPDATE TAG SET NAME = ? WHERE ID = ?", newName, tagId);
 	}
@@ -70,6 +110,33 @@ public class TagRepository {
 	}
 
 	/**
+	 * Adds a tag to an email, and recursively to all replies of that email.
+	 * @param emailId The id of the first email to add the tag to.
+	 * @param tagId The tag to add.
+	 */
+	public void addTagRecursive(long emailId, int tagId) throws SQLException {
+		try {
+			conn.setAutoCommit(false);
+			var repo = new EmailRepository(conn);
+			Queue<Long> emailIdQueue = new LinkedList<>();
+			emailIdQueue.add(emailId);
+			while (!emailIdQueue.isEmpty()) {
+				long nextId = emailIdQueue.remove();
+				addTag(nextId, tagId);
+				for (var reply : repo.findAllReplies(nextId)) {
+					emailIdQueue.add(reply.id());
+				}
+			}
+			conn.commit();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			conn.rollback();
+		} finally {
+			conn.setAutoCommit(true);
+		}
+	}
+
+	/**
 	 * Removes a tag from an email. Does nothing if the email doesn't have the
 	 * tag.
 	 * @param emailId The id of the email.
@@ -77,6 +144,33 @@ public class TagRepository {
 	 */
 	public void removeTag(long emailId, int tagId) {
 		update(conn, "DELETE FROM EMAIL_TAG WHERE EMAIL_ID = ? AND TAG_ID = ?", emailId, tagId);
+	}
+
+	/**
+	 * Removes a tag from an email, and recursively from all replies of that email.
+	 * @param emailId The id of the first email to remove the tag from.
+	 * @param tagId The tag to remove.
+	 */
+	public void removeTagRecursive(long emailId, int tagId) throws SQLException {
+		try {
+			conn.setAutoCommit(false);
+			var repo = new EmailRepository(conn);
+			Queue<Long> emailIdQueue = new LinkedList<>();
+			emailIdQueue.add(emailId);
+			while (!emailIdQueue.isEmpty()) {
+				long nextId = emailIdQueue.remove();
+				removeTag(nextId, tagId);
+				for (var reply : repo.findAllReplies(nextId)) {
+					emailIdQueue.add(reply.id());
+				}
+			}
+			conn.commit();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			conn.rollback();
+		} finally {
+			conn.setAutoCommit(true);
+		}
 	}
 
 	/**

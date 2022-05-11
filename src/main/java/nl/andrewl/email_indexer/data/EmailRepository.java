@@ -3,7 +3,8 @@ package nl.andrewl.email_indexer.data;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 import static nl.andrewl.email_indexer.util.DbUtils.*;
 
@@ -26,7 +27,7 @@ public class EmailRepository {
 	 * @return The total number of emails.
 	 */
 	public long countEmails() {
-		return count(conn, "SELECT COUNT(MESSAGE_ID) FROM EMAIL");
+		return count(conn, "SELECT COUNT(ID) FROM EMAIL");
 	}
 
 	/**
@@ -34,17 +35,17 @@ public class EmailRepository {
 	 * @return The total number of tagged emails.
 	 */
 	public long countTaggedEmails() {
-		return count(conn, "SELECT COUNT(DISTINCT MESSAGE_ID) FROM EMAIL_TAG");
+		return count(conn, "SELECT COUNT(DISTINCT EMAIL_ID) FROM EMAIL_TAG");
 	}
 
 	/**
-	 * Fetches an email by its unique message id.
-	 * @param messageId The email's id.
+	 * Fetches an email by its id.
+	 * @param id The email's id.
 	 * @return An optional that contains the email that was found, if any.
 	 */
-	public Optional<EmailEntry> findEmailById(String messageId) {
+	public Optional<EmailEntry> findEmailById(long id) {
 		try (var stmt = conn.prepareStatement(QueryCache.load("/sql/fetch_email_by_id.sql"))) {
-			stmt.setString(1, messageId);
+			stmt.setLong(1, id);
 			var rs = stmt.executeQuery();
 			if (!rs.next()) return Optional.empty();
 			var entry = new EmailEntry(
@@ -67,13 +68,13 @@ public class EmailRepository {
 
 	/**
 	 * Finds a preview of an email by its unique message id.
-	 * @param messageId The id of the email.
+	 * @param id The id of the email.
 	 * @return An optional that contains a preview of the email that was found,
 	 * if any.
 	 */
-	public Optional<EmailEntryPreview> findPreviewById(String messageId) {
+	public Optional<EmailEntryPreview> findPreviewById(long id) {
 		try (var stmt = conn.prepareStatement(QueryCache.load("/sql/preview/fetch_email_preview_by_id.sql"))) {
-			stmt.setString(1, messageId);
+			stmt.setLong(1, id);
 			var rs = stmt.executeQuery();
 			if (!rs.next()) return Optional.empty();
 			return Optional.of(new EmailEntryPreview(rs));
@@ -85,27 +86,27 @@ public class EmailRepository {
 
 	/**
 	 * Finds all replies for an email identified by the given id.
-	 * @param messageId The email's id.
+	 * @param id The email's id.
 	 * @return A list of previews of emails that are replies to the email
 	 * identified by the provided message id.
 	 */
-	public List<EmailEntryPreview> findAllReplies(String messageId) {
+	public List<EmailEntryPreview> findAllReplies(long id) {
 		return fetch(
 				conn,
 				QueryCache.load("/sql/preview/fetch_email_preview_by_parent_id.sql"),
 				EmailEntryPreview::new,
-				messageId
+				id
 		);
 	}
 
 	/**
 	 * Gets just the body of an email identified by the given id.
-	 * @param messageId The id of the email whose body to get.
+	 * @param id The id of the email whose body to get.
 	 * @return The body of the requested email.
 	 */
-	public Optional<String> getBody(String messageId) {
-		try (var stmt = conn.prepareStatement("SELECT BODY FROM EMAIL WHERE MESSAGE_ID = ?")) {
-			stmt.setString(1, messageId);
+	public Optional<String> getBody(long id) {
+		try (var stmt = conn.prepareStatement("SELECT BODY FROM EMAIL WHERE ID = ?")) {
+			stmt.setLong(1, id);
 			var rs = stmt.executeQuery();
 			if (rs.next()) {
 				return Optional.of(rs.getString(1));
@@ -151,29 +152,29 @@ public class EmailRepository {
 
 	/**
 	 * Sets an email as hidden.
-	 * @param messageId The id of the email.
+	 * @param id The id of the email.
 	 */
-	public void hideEmail(String messageId) {
-		update(conn, "UPDATE EMAIL SET HIDDEN = TRUE WHERE MESSAGE_ID = ?", messageId);
+	public void hideEmail(long id) {
+		update(conn, "UPDATE EMAIL SET HIDDEN = TRUE WHERE ID = ?", id);
 	}
 
 	/**
 	 * Sets an email as not hidden.
-	 * @param messageId The id of the email.
+	 * @param id The id of the email.
 	 */
-	public void showEmail(String messageId) {
-		update(conn, "UPDATE EMAIL SET HIDDEN = FALSE WHERE MESSAGE_ID = ?", messageId);
+	public void showEmail(long id) {
+		update(conn, "UPDATE EMAIL SET HIDDEN = FALSE WHERE ID = ?", id);
 	}
 
 	private int hideEmailsByQuery(String msg, String conditions, Object... args) {
 		try {
 			conn.setAutoCommit(false);
-			List<String> ids = fetch(conn, "SELECT MESSAGE_ID FROM EMAIL WHERE " + conditions, rs -> rs.getString(1), args);
+			List<Long> ids = fetch(conn, "SELECT ID FROM EMAIL WHERE " + conditions, rs -> rs.getLong(1), args);
 			long mId = insertWithId(conn, "INSERT INTO MUTATION (DESCRIPTION) VALUES (?)", msg);
-			try (var stmt = conn.prepareStatement("INSERT INTO MUTATION_EMAIL(MUTATION_ID, MESSAGE_ID) VALUES (?, ?)")) {
+			try (var stmt = conn.prepareStatement("INSERT INTO MUTATION_EMAIL(MUTATION_ID, EMAIL_ID) VALUES (?, ?)")) {
 				stmt.setLong(1, mId);
 				for (var id : ids) {
-					stmt.setString(2, id);
+					stmt.setLong(2, id);
 					stmt.executeUpdate();
 				}
 			}

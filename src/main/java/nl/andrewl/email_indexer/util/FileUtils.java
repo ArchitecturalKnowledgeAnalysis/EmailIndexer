@@ -1,6 +1,8 @@
 package nl.andrewl.email_indexer.util;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -39,6 +41,16 @@ public class FileUtils {
 			});
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	public static Path getClasspathResourceAsPath(String name) {
+		URL url = Thread.currentThread().getContextClassLoader().getResource(name);
+		if (url == null) return null;
+		try {
+			return Path.of(url.toURI());
+		} catch (URISyntaxException e) {
+			throw new RuntimeException(e);
 		}
 	}
 }

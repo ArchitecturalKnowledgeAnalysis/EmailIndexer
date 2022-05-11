@@ -14,7 +14,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Component that generates email datasets from a set of directories containing
@@ -23,10 +23,18 @@ import java.util.concurrent.CompletionStage;
 public class EmailDatasetGenerator {
 	private final Status status;
 
+	/**
+	 * Constructs the generator with the given status tracker.
+	 * @param status The status tracker.
+	 */
 	public EmailDatasetGenerator(Status status) {
 		this.status = status;
 	}
 
+	/**
+	 * Constructs the generator with a no-op status, meaning that generation
+	 * will not emit any messages.
+	 */
 	public EmailDatasetGenerator() {
 		this(Status.noOp());
 	}
@@ -38,7 +46,7 @@ public class EmailDatasetGenerator {
 	 * @param dsDir The directory to save the dataset at.
 	 * @return A completion stage that completes when the dataset is created.
 	 */
-	public CompletionStage<Void> generate(Collection<Path> mboxFileDirs, Path dsDir) {
+	public CompletableFuture<Void> generate(Collection<Path> mboxFileDirs, Path dsDir) {
 		return Async.run(() -> {
 			status.sendMessage("Starting dataset generation.");
 			Files.createDirectories(dsDir);

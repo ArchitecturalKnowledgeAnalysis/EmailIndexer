@@ -3,6 +3,12 @@ package nl.andrewl.email_indexer.data;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+/**
+ * Represents a tag that can be applied to emails, in order to categorize them.
+ * @param id The tag's internal id.
+ * @param name The name of the tag. This is required, and must be unique.
+ * @param description A description for the tag. This may be null.
+ */
 public record Tag(
 		int id,
 		String name,

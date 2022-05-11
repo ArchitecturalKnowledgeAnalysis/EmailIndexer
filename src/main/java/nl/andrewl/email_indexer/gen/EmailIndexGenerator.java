@@ -13,7 +13,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
+import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Component that generates Lucene search indexes from various sources.
@@ -63,28 +61,13 @@ public class EmailIndexGenerator {
 			Collection<SearchFilter> filters = new HashSet<>();
 			filters.add(new HiddenFilter(false));
 			long count = searcher.countAll(filters).join();
-			final int pageCount = Runtime.getRuntime().availableProcessors() - 1;
-			int itemsPerPage = (int) (count / pageCount);
-			int remainderItems = (int) (count % pageCount);
-			Set<EmailSearchResult> pages = new HashSet<>();
-			for (int i = 0; i < pageCount; i++) {
-				final int page = i + 1;
-				status.sendMessage("Fetching page %d of %d".formatted(page, pageCount + 1));
-				pages.add(searcher.findAll(page, itemsPerPage, filters).join());
-			}
-			status.sendMessage("Fetching page %d of %d".formatted(pageCount + 1, pageCount + 1));
-			pages.add(searcher.findAll(pageCount + 1, remainderItems, filters).join());
-			Set<Thread> threads = pages.stream()
-					.map(result -> new Thread(() -> indexPage(result, repo, emailIndexWriter)))
-					.peek(Thread::start)
-					.collect(Collectors.toSet());
-			status.sendMessage("Spawned " + threads.size() + " threads to process indexes.");
-			for (var thread : threads) {
-				try {
-					thread.join();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+			status.sendMessage("Indexing %d emails.".formatted(count));
+			final int pageSize = 1000;
+			int pageCount = (int) (count / pageSize) + (count % pageSize == 0 ? 0 : 1);
+			for (int page = 1; page <= pageCount; page++) {
+				status.sendMessage("Fetching page %d of %d.".formatted(page, pageCount));
+				EmailSearchResult result = searcher.findAll(page, pageSize, filters).join();
+				indexPage(result, repo, emailIndexWriter);
 			}
 			status.sendMessage("Indexing complete.");
 		}
@@ -99,14 +82,14 @@ public class EmailIndexGenerator {
 	}
 
 	private void addToIndex(EmailEntryPreview email, EmailRepository repo, IndexWriter emailIndexWriter) {
-		repo.getBody(email.messageId()).ifPresent(body -> {
+		repo.getBody(email.id()).ifPresent(body -> {
 			Document doc = new Document();
-			doc.add(new StringField("id", email.messageId(), Field.Store.YES));
+			doc.add(new StoredField("id", email.id()));
 			doc.add(new Field("subject", email.subject(), TextField.TYPE_NOT_STORED));
 			doc.add(new Field("body", body, TextField.TYPE_NOT_STORED));
-			repo.findRootEmailByChildId(email.messageId()).ifPresent(rootEmail -> {
-				doc.add(new StringField("rootId", rootEmail.messageId(), Field.Store.YES));
-			});
+			// Store the root id. If we couldn't find a root id, use this email's id.
+			long rootId = repo.findRootEmailByChildId(email.id()).map(EmailEntryPreview::id).orElse(email.id());
+			doc.add(new StoredField("rootId", rootId));
 			try {
 				emailIndexWriter.addDocument(doc);
 			} catch (IOException e) {
