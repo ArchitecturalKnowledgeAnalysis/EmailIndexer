@@ -23,6 +23,14 @@ public class TagRepository {
 		this.conn = ds.getConnection();
 	}
 
+	public Optional<Tag> getTagById(int id) {
+		return DbUtils.fetchOne(conn, QueryCache.load("/sql/tag/fetch_tag_by_id.sql"), Tag::new, id);
+	}
+
+	public Optional<Tag> getTagByName(String name) {
+		return DbUtils.fetchOne(conn, QueryCache.load("/sql/tag/fetch_tag_by_name.sql"), Tag::new, name);
+	}
+
 	/**
 	 * Counts the number of tags in the database.
 	 * @return The number of tags.
@@ -107,6 +115,15 @@ public class TagRepository {
 		if (!hasTag(emailId, tagId)) {
 			update(conn, "INSERT INTO EMAIL_TAG (EMAIL_ID, TAG_ID) VALUES (?, ?)", emailId, tagId);
 		}
+	}
+
+	/**
+	 *
+	 * @param emailId
+	 * @param tagName
+	 */
+	public void addTag(long emailId, String tagName) {
+
 	}
 
 	/**
