@@ -2,6 +2,8 @@ package nl.andrewl.email_indexer.gen;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.QueryCache;
+import nl.andrewl.email_indexer.util.DbUtils;
+import nl.andrewl.email_indexer.util.Status;
 import nl.andrewl.mboxparser.Email;
 import nl.andrewl.mboxparser.EmailHandler;
 
@@ -53,9 +55,50 @@ public class DatabaseGenerator implements AutoCloseable, EmailHandler {
 	 * <ul>
 	 *     <li>Determine and set each email's PARENT_ID, based on their IN_REPLY_TO.</li>
 	 * </ul>
+	 * @param status A status tracker.
 	 * @throws SQLException If an error occurs.
 	 */
-	public synchronized void postProcess() throws SQLException {
+	public synchronized void postProcess(Status status) throws SQLException {
+		long count = DbUtils.count(conn, "SELECT COUNT(ID) FROM EMAIL WHERE IN_REPLY_TO IS NOT NULL");
+		status.sendMessage("Applying parent-id lookup for %d emails.".formatted(count));
+		final int pageSize = 1000;
+		int pageCount = (int) (count / pageSize) + (count % pageSize == 0 ? 0 : 1);
+		DbUtils.doTransaction(conn, c -> {
+			for (int page = 1; page <= pageCount; page++) {
+				status.sendMessage("Processing page %d of %d.".formatted(page, pageCount));
+				try (
+					var fetchStmt = c.prepareStatement("""
+						SELECT ID, IN_REPLY_TO
+						FROM EMAIL
+						WHERE IN_REPLY_TO IS NOT NULL
+						LIMIT %d OFFSET %d""".formatted(pageSize, (page - 1) * pageSize));
+					var fetchByMessageId = c.prepareStatement("""
+						SELECT ID
+						FROM EMAIL
+						WHERE MESSAGE_ID = ?""");
+					var updateParentId = c.prepareStatement("""
+						UPDATE EMAIL
+						SET PARENT_ID = ?
+						WHERE ID = ?""")
+				) {
+					var rs = fetchStmt.executeQuery();
+					while (rs.next()) {
+						long id = rs.getLong(1);
+						String inReplyTo = rs.getString(2);
+						fetchByMessageId.setString(1, inReplyTo);
+						var msgIdRs = fetchByMessageId.executeQuery();
+						if (msgIdRs.next()) {
+							long parentId = msgIdRs.getLong(1);
+							updateParentId.setLong(1, parentId);
+							updateParentId.setLong(2, id);
+							updateParentId.executeUpdate();
+						}
+					}
+				}
+			}
+		});
+
+
 		String sql = """
 				UPDATE EMAIL E
 				SET E.PARENT_ID = (SELECT ID FROM EMAIL E2 WHERE E2.MESSAGE_ID = E.IN_REPLY_TO)

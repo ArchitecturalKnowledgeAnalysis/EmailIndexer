@@ -64,7 +64,7 @@ public class EmailDatasetGenerator {
 				status.incrementStepsDone();
 			}
 			status.sendMessage("Performing post-processing on parsed emails.");
-			dbGen.postProcess();
+			dbGen.postProcess(status);
 			status.incrementStepsDone();
 			dbGen.close();
 			status.sendMessage("All emails added to the database.");
@@ -72,6 +72,7 @@ public class EmailDatasetGenerator {
 			EmailDataset dataset = new EmailDataset(dsDir);
 			status.sendMessage("Generating index.");
 			new EmailIndexGenerator(status).generateIndex(dataset);
+			dataset.close();
 			status.sendMessage("Dataset generation complete.");
 		});
 	}
