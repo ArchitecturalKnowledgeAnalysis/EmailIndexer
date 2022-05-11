@@ -1,11 +1,9 @@
 package nl.andrewl.email_indexer.data.search;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
-import nl.andrewl.email_indexer.data.EmailRepository;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -64,12 +62,11 @@ public class EmailIndexSearcher {
 			IndexSearcher searcher = new IndexSearcher(reader);
 			TopDocs docs = searcher.search(query, Integer.MAX_VALUE, Sort.RELEVANCE, false);
 			ScoreDoc[] hits = docs.scoreDocs;
-			var repo = new EmailRepository(dataset);
 			Set<Long> rootIds = new HashSet<>();
 			for (ScoreDoc hit : hits) {
 				Document doc = searcher.doc(hit.doc);
 				IndexableField rootIdField = doc.getField("rootId");
-				if (rootIdField != null && rootIdField.fieldType().docValuesType() == DocValuesType.NUMERIC) {
+				if (rootIdField != null && rootIdField.numericValue() != null) {
 					long rootId = rootIdField.numericValue().longValue();
 					if (!rootIds.contains(rootId)) {
 						rootIds.add(rootId);
