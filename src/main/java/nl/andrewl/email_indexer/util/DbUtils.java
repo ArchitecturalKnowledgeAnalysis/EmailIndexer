@@ -67,6 +67,11 @@ public final class DbUtils {
 		T map(ResultSet rs) throws SQLException;
 	}
 
+	@FunctionalInterface
+	public interface Transaction {
+		void doTransaction(Connection c) throws SQLException;
+	}
+
 	/**
 	 * Fetches a list of results from a database.
 	 * @param c The connection to use.
@@ -111,5 +116,31 @@ public final class DbUtils {
 			e.printStackTrace();
 		}
 		return Optional.empty();
+	}
+
+	public static void doTransaction(Connection c, Transaction tx) {
+		try {
+			c.setAutoCommit(false);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return;
+		}
+		try {
+			tx.doTransaction(c);
+			c.commit();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			try {
+				c.rollback();
+			} catch (SQLException e1) {
+				throw new IllegalStateException(e1);
+			}
+		} finally {
+			try {
+				c.setAutoCommit(true);
+			} catch (SQLException e1) {
+				throw new IllegalStateException(e1);
+			}
+		}
 	}
 }

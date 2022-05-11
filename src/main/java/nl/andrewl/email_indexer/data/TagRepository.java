@@ -32,6 +32,14 @@ public class TagRepository {
 	}
 
 	/**
+	 * Finds all tags in the dataset.
+	 * @return The list of tags, ordered by their name.
+	 */
+	public List<Tag> findAll() {
+		return DbUtils.fetch(conn, QueryCache.load("/sql/tag/fetch_all_tags.sql"), Tag::new);
+	}
+
+	/**
 	 * Counts the number of tags in the database.
 	 * @return The number of tags.
 	 */
@@ -107,6 +115,21 @@ public class TagRepository {
 	}
 
 	/**
+	 * Determines if an email has a certain tag.
+	 * @param emailId The id of the email.
+	 * @param tagName The tag to check.
+	 * @return True if the email has the tag, or false otherwise.
+	 */
+	public boolean hasTag(long emailId, String tagName) {
+		return count(
+				conn,
+				"SELECT COUNT(EMAIL_ID) FROM EMAIL_TAG WHERE EMAIL_ID = ? AND TAG_ID = (SELECT ID FROM TAG WHERE NAME = ?)",
+				emailId,
+				tagName
+		) > 0;
+	}
+
+	/**
 	 * Adds a tag to an email. Does nothing if the email already has the tag.
 	 * @param emailId The id of the email.
 	 * @param tagId The tag to add.
@@ -118,12 +141,17 @@ public class TagRepository {
 	}
 
 	/**
-	 *
-	 * @param emailId
-	 * @param tagName
+	 * Adds a tag to an email. If the tag doesn't exist yet, it will be added
+	 * automatically with an empty description.
+	 * @param emailId The id of the email.
+	 * @param tagName The name of the tag.
 	 */
 	public void addTag(long emailId, String tagName) {
-
+		if (hasTag(emailId, tagName)) return;
+		DbUtils.doTransaction(conn, c -> {
+			var tag = this.getTagByName(tagName).orElse(createTag(tagName, null));
+			addTag(emailId, tag.id());
+		});
 	}
 
 	/**
