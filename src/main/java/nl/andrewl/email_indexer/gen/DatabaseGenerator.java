@@ -97,15 +97,6 @@ public class DatabaseGenerator implements AutoCloseable, EmailHandler {
 				}
 			}
 		});
-
-
-		String sql = """
-				UPDATE EMAIL E
-				SET E.PARENT_ID = (SELECT ID FROM EMAIL E2 WHERE E2.MESSAGE_ID = E.IN_REPLY_TO)
-				WHERE EXISTS (SELECT * FROM EMAIL E2 WHERE E2.MESSAGE_ID = E.IN_REPLY_TO)""";
-		try (var stmt = conn.prepareStatement(sql)) {
-			stmt.executeUpdate();
-		}
 	}
 
 	@Override
