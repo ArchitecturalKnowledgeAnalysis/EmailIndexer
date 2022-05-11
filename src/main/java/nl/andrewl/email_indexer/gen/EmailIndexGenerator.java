@@ -13,8 +13,9 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.StoredField;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
@@ -84,9 +85,13 @@ public class EmailIndexGenerator {
 	private void addToIndex(EmailEntryPreview email, EmailRepository repo, IndexWriter emailIndexWriter) {
 		repo.getBody(email.id()).ifPresent(body -> {
 			Document doc = new Document();
+			FieldType indexedStringType = new FieldType();
+			indexedStringType.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
+			indexedStringType.setStored(false);
+			indexedStringType.freeze();
 			doc.add(new StoredField("id", email.id()));
-			doc.add(new Field("subject", email.subject(), TextField.TYPE_NOT_STORED));
-			doc.add(new Field("body", body, TextField.TYPE_NOT_STORED));
+			doc.add(new Field("subject", email.subject(), indexedStringType));
+			doc.add(new Field("body", body, indexedStringType));
 			// Store the root id. If we couldn't find a root id, use this email's id.
 			long rootId = repo.findRootEmailByChildId(email.id()).map(EmailEntryPreview::id).orElse(email.id());
 			doc.add(new StoredField("rootId", rootId));
