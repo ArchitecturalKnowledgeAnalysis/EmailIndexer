@@ -11,10 +11,7 @@ import nl.andrewl.email_indexer.util.FileUtils;
 import nl.andrewl.email_indexer.util.Status;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.StoredField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -90,8 +87,8 @@ public class EmailIndexGenerator {
 			indexedStringType.setStored(false);
 			indexedStringType.freeze();
 			doc.add(new StoredField("id", email.id()));
-			doc.add(new Field("subject", email.subject(), indexedStringType));
-			doc.add(new Field("body", body, indexedStringType));
+			doc.add(new TextField("subject", email.subject(), Field.Store.NO));
+			doc.add(new TextField("body", body, Field.Store.NO));
 			// Store the root id. If we couldn't find a root id, use this email's id.
 			long rootId = repo.findRootEmailByChildId(email.id()).map(EmailEntryPreview::id).orElse(email.id());
 			doc.add(new StoredField("rootId", rootId));
