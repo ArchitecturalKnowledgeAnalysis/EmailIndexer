@@ -21,17 +21,17 @@ import nl.andrewl.email_indexer.data.export.ExportException;
 public final class PlainTextQueryExporter implements QueryExporter {
     @Override
     public CompletableFuture<Void> export(QueryExporterParams exportParams) throws ExportException {
-        if (exportParams.emails() == null) {
+        if (exportParams.getEmails() == null) {
             throw new ExportException(
                     "Emails parameter cannot be null. In that case, use TypeAwareQueryExporter instead.");
         }
-        Path outputPath = Path.of(exportParams.directory() + "/output.txt");
+        Path outputPath = Path.of(exportParams.getOutputDirectory() + "/output.txt");
         try (PrintWriter p = new PrintWriter(new FileWriter(outputPath.toFile()), false)) {
             writeMetadata(exportParams, p);
-            List<EmailEntryPreview> emails = exportParams.emails();
+            List<EmailEntryPreview> emails = exportParams.getEmails();
             for (int i = 0; i < emails.size(); i++) {
                 EmailEntryPreview email = emails.get(i);
-                if (exportParams.separateThreads()) {
+                if (exportParams.mailingThreadsAreSeparate()) {
                     writeThreadInSeparateDocument(exportParams, email, i);
                 } else {
                     writeThreadInDocument(exportParams, email, p, 0);
@@ -44,32 +44,33 @@ public final class PlainTextQueryExporter implements QueryExporter {
     }
 
     private void writeMetadata(QueryExporterParams exportParams, PrintWriter p) {
-        p.println("Query: " + exportParams.query());
+        p.println("Query: " + exportParams.getQuery());
         p.println("Exported at: " + ZonedDateTime.now());
         p.println("Tags: "
-                + exportParams.tagRepository().findAll().stream().map(Tag::name).collect(Collectors.joining(", ")));
-        p.println("Total emails: " + exportParams.emails().size());
+                + exportParams.getTagRepository().findAll().stream().map(Tag::name).collect(Collectors.joining(", ")));
+        p.println("Total emails: " + exportParams.getEmails().size());
         p.println("\n");
     }
-    
+
     /**
-     * Creates a new document and writes the mailing thread in it. 
+     * Creates a new document and writes the mailing thread in it.
      */
-    private void writeThreadInSeparateDocument(QueryExporterParams exportParams, EmailEntryPreview email, int emailIndex)
+    private void writeThreadInSeparateDocument(QueryExporterParams exportParams, EmailEntryPreview email,
+            int emailIndex)
             throws IOException {
-        Path outputPath = Path.of(exportParams.directory() + "/email-" + emailIndex + ".txt");
+        Path outputPath = Path.of(exportParams.getOutputDirectory() + "/email-" + emailIndex + ".txt");
         try (PrintWriter p = new PrintWriter(new FileWriter(outputPath.toFile()), false)) {
             writeThreadInDocument(exportParams, email, p, 0);
         }
     }
 
     /**
-     * Writes all information of a mailing thread into a plain-text document. 
+     * Writes all information of a mailing thread into a plain-text document.
      */
     private void writeThreadInDocument(QueryExporterParams exportParams, EmailEntryPreview email, PrintWriter p,
             int indentLevel) {
-        EmailRepository repo = exportParams.repository();
-        TagRepository tagRepo = exportParams.tagRepository();
+        EmailRepository repo = exportParams.getRepository();
+        TagRepository tagRepo = exportParams.getTagRepository();
         String indent = "\t".repeat(indentLevel);
         p.println(indent + "Message id: " + email.messageId());
         p.println(indent + "Subject: " + email.subject());

@@ -24,7 +24,7 @@ import nl.andrewl.email_indexer.data.Tag;
 import nl.andrewl.email_indexer.data.export.ExportException;
 
 /**
- * Writes all information of a mailing thread into a PDF document. 
+ * Writes all information of a mailing thread into a PDF document.
  */
 public final class PdfQueryExporter implements QueryExporter {
     public static Font HEADER_TEXT = FontFactory.getFont(FontFactory.COURIER, FontFactory.defaultEncoding,
@@ -36,17 +36,17 @@ public final class PdfQueryExporter implements QueryExporter {
 
     @Override
     public CompletableFuture<Void> export(QueryExporterParams exportParams) throws ExportException {
-        if (exportParams.emails() == null) {
+        if (exportParams.getEmails() == null) {
             throw new ExportException(
                     "Emails parameter cannot be null. In that case, use TypeAwareQueryExporter instead.");
         }
         Document metaDocument = makeMetaFile(exportParams);
-        List<EmailEntryPreview> emails = exportParams.emails();
-        Path targetDirectory = exportParams.directory();
+        List<EmailEntryPreview> emails = exportParams.getEmails();
+        Path targetDirectory = exportParams.getOutputDirectory();
         for (int i = 0; i < emails.size(); i++) {
             EmailEntryPreview email = emails.get(i);
             String replyId = "#" + (i + 1);
-            if (exportParams.separateThreads()) {
+            if (exportParams.mailingThreadsAreSeparate()) {
                 writeThreadInSeparateDocument(targetDirectory, exportParams, email, replyId);
             } else {
                 writeThreadInDocument(metaDocument, exportParams, email, replyId);
@@ -58,24 +58,26 @@ public final class PdfQueryExporter implements QueryExporter {
 
     private Document makeMetaFile(QueryExporterParams exportParams) {
         Document document = new Document();
-        Path targetPath = Path.of(exportParams.directory().toString() + "/output.pdf");
+        Path targetPath = Path.of(exportParams.getOutputDirectory().toString() + "/output.pdf");
         createPdfInstance(document, targetPath);
         document.open();
         addText("Export Meta Data", document, HEADER_TEXT);
         addText("Query:", document, SUBHEADER_TEXT);
-        addText(exportParams.query() + "\n\n", document, REGULAR_TEXT);
+        addText(exportParams.getQuery() + "\n\n", document, REGULAR_TEXT);
         addText("Exported at:", document, SUBHEADER_TEXT);
         addText(ZonedDateTime.now() + "\n\n", document, REGULAR_TEXT);
         addText("Tags:", document, SUBHEADER_TEXT);
-        String tags = exportParams.tagRepository().findAll().stream().map(Tag::name).collect(Collectors.joining(", "));
+        String tags = exportParams.getTagRepository().findAll().stream().map(Tag::name)
+                .collect(Collectors.joining(", "));
         addText(tags, document, REGULAR_TEXT);
         addText("Total emails:", document, SUBHEADER_TEXT);
-        addText(exportParams.emails().size() + "\n\n", document, REGULAR_TEXT);
+        addText(exportParams.getEmails().size() + "\n\n", document, REGULAR_TEXT);
         document.newPage();
         return document;
     }
 
-    private void writeThreadInSeparateDocument(Path workingDir, QueryExporterParams exportParams, EmailEntryPreview email,
+    private void writeThreadInSeparateDocument(Path workingDir, QueryExporterParams exportParams,
+            EmailEntryPreview email,
             String mailIndex) {
         Document document = new Document();
         Path targetPath = Path.of(workingDir.toString() + "/email-" + mailIndex + ".pdf");
@@ -87,7 +89,7 @@ public final class PdfQueryExporter implements QueryExporter {
 
     private void writeThreadInDocument(Document document, QueryExporterParams exportParams, EmailEntryPreview email,
             String emailId) {
-        EmailRepository repository = exportParams.repository();
+        EmailRepository repository = exportParams.getRepository();
         addText("Email " + emailId, document, HEADER_TEXT);
         addText("Subject:", document, SUBHEADER_TEXT);
         addText(email.subject() + "\n\n", document, REGULAR_TEXT);
@@ -96,7 +98,7 @@ public final class PdfQueryExporter implements QueryExporter {
         addText("Date:", document, SUBHEADER_TEXT);
         addText(email.date() + "\n\n", document, REGULAR_TEXT);
         addText("Tags:", document, SUBHEADER_TEXT);
-        String tags = exportParams.tagRepository().getTags(email.id()).stream().map(Tag::name)
+        String tags = exportParams.getTagRepository().getTags(email.id()).stream().map(Tag::name)
                 .collect(Collectors.joining(", "));
         addText(tags + "\n\n", document, REGULAR_TEXT);
         addText("Reply Count:", document, SUBHEADER_TEXT);

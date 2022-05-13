@@ -2,7 +2,6 @@ package nl.andrewl.email_indexer.data.export.query;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
@@ -12,74 +11,95 @@ import nl.andrewl.email_indexer.data.TagRepository;
 /**
  * Parameter object for the EmailDatasetExporter.
  */
-public record QueryExporterParams(String query, EmailRepository repository, TagRepository tagRepository,
-        EmailDataset dataset, Path directory, int maxResultCount, String fileType, boolean separateThreads,
-        List<EmailEntryPreview> emails) {
+public class QueryExporterParams {
+    private String query = "";
+    private EmailRepository repository = null;
+    private TagRepository tagRepository = null;
+    private EmailDataset dataset = null;
+    private List<EmailEntryPreview> emails = null;
+    private Path outputDirectory = null;
+    private int maxResultCount = 100;
+    private String outputFileType = "txt";
+    private boolean separateMailingThreads = false;
 
-    private final static String DEFAULT_FILETYPE = "txt";
-    private final static boolean DEFAULT_SEPARATE_THREADS = false;
-
-    /**
-     * 
-     * @param query           the exported query.
-     * @param repository      the used repository.
-     * @param tagRepository   the used tagrepository.
-     * @param dataset         the used dataset.
-     * @param directory       the output directory.
-     * @param maxResultCount  the maximum number of exported email threads.
-     * @param fileType        the targeted filetype (default is txt).
-     * @param separateThreads whether threads are separated in different output
-     *                        files (default is false).
-     * @param emails          the to-be-exported emails (default is null)
-     */
-    public QueryExporterParams {
-        Objects.requireNonNull(query);
-        Objects.requireNonNull(repository);
-        Objects.requireNonNull(tagRepository);
-        Objects.requireNonNull(dataset);
-        Objects.requireNonNull(directory);
-        Objects.requireNonNull(maxResultCount);
-        Objects.requireNonNull(fileType);
-        Objects.requireNonNull(separateThreads);
+    public String getQuery() {
+        return query;
     }
 
-    /**
-     * Constructor with default filetype, separateThreads, and emails fields.
-     */
-    public QueryExporterParams(String query, EmailRepository repository, TagRepository tagRepository,
-            EmailDataset dataset, Path directory, int maxResultCount) {
-        this(query, repository, tagRepository, dataset, directory, maxResultCount, DEFAULT_FILETYPE,
-                DEFAULT_SEPARATE_THREADS, null);
+    public EmailRepository getRepository() {
+        return repository;
     }
 
-    /**
-     * Constructor with default separateThreads, and emails fields.
-     */
-    public QueryExporterParams(String query, EmailRepository repository, TagRepository tagRepository,
-            EmailDataset dataset, Path directory, int maxResultCount, String fileType) {
-        this(query, repository, tagRepository, dataset, directory, maxResultCount, fileType, DEFAULT_SEPARATE_THREADS,
-                null);
+    public TagRepository getTagRepository() {
+        return tagRepository;
     }
 
-    /**
-     * Constructor with all parameters except emails.
-     */
-    public QueryExporterParams(String query, EmailRepository repository, TagRepository tagRepository,
-            EmailDataset dataset, Path directory, int maxResultCount, String fileType, boolean separateThreads) {
-        this(query, repository, tagRepository, dataset, directory, maxResultCount, fileType, separateThreads,
-                null);
+    public EmailDataset getDataset() {
+        return dataset;
     }
 
-    /**
-     * Constructor that copies all fields from the previous parameters and updates
-     * the emails field.
-     * 
-     * @param params target object used for copying fields.
-     * @param emails updated list of emails.
-     */
-    public QueryExporterParams(QueryExporterParams params, List<EmailEntryPreview> emails) {
-        this(params.query, params.repository, params.tagRepository, params.dataset, params.directory,
-                params.maxResultCount, params.fileType,
-                params.separateThreads, emails);
+    public Path getOutputDirectory() {
+        return outputDirectory;
+    }
+
+    public List<EmailEntryPreview> getEmails() {
+        return emails;
+    }
+
+    public int getMaxResultCount() {
+        return maxResultCount;
+    }
+
+    public String getOutputFileType() {
+        return outputFileType;
+    }
+
+    public boolean mailingThreadsAreSeparate() {
+        return separateMailingThreads;
+    }
+
+    public QueryExporterParams withQuery(String query) {
+        this.query = query;
+        return this;
+    }
+
+    public QueryExporterParams withRepository(EmailRepository repository) {
+        this.repository = repository;
+        return this;
+    }
+
+    public QueryExporterParams withTagRepository(TagRepository tagRepository) {
+        this.tagRepository = tagRepository;
+        return this;
+    }
+
+    public QueryExporterParams withDataset(EmailDataset dataset) {
+        this.dataset = dataset;
+        return this;
+    }
+
+    public QueryExporterParams withEmails(List<EmailEntryPreview> emails) {
+        this.emails = emails;
+        return this;
+    }
+
+    public QueryExporterParams withOutputDirectory(Path outputDirectory) {
+        this.outputDirectory = outputDirectory;
+        return this;
+    }
+
+    public QueryExporterParams withMaxResultCount(int maxResultCount) {
+        this.maxResultCount = maxResultCount;
+        return this;
+    }
+
+    public QueryExporterParams withOutputFileType(String fileType) {
+        this.outputFileType = fileType;
+        return this;
+    }
+
+    public QueryExporterParams withSeparateMailingThreads(boolean separateMailingThreads) {
+        this.separateMailingThreads = separateMailingThreads;
+        return this;
     }
 }

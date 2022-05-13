@@ -16,22 +16,23 @@ public final class TypeAwareQueryExporter implements QueryExporter {
 
     @Override
     public CompletableFuture<Void> export(QueryExporterParams exportParams) throws ExportException {
-        QueryExporter exporter = switch (exportParams.fileType()) {
+        QueryExporter exporter = switch (exportParams.getOutputFileType()) {
             case "txt" -> new PlainTextQueryExporter();
             case "pdf" -> new PdfQueryExporter();
-            default -> throw new IllegalArgumentException("Unsupported export file type: " + exportParams.fileType());
+            default ->
+                throw new IllegalArgumentException("Unsupported export file type: " + exportParams.getOutputFileType());
         };
-        return new EmailIndexSearcher().searchAsync(exportParams.dataset(), exportParams.query())
+        return new EmailIndexSearcher().searchAsync(exportParams.getDataset(), exportParams.getQuery())
                 .handleAsync((emailIds, throwable) -> {
                     if (throwable != null) {
                         throw new ExportException("An error occurred while exporting.", throwable);
                     }
                     List<EmailEntryPreview> emails = emailIds.parallelStream()
-                            .map(id -> exportParams.repository().findPreviewById(id).orElse(null))
+                            .map(id -> exportParams.getRepository().findPreviewById(id).orElse(null))
                             .filter(Objects::nonNull)
-                            .limit(exportParams.maxResultCount())
+                            .limit(exportParams.getMaxResultCount())
                             .toList();
-                    return new QueryExporterParams(exportParams, emails);
+                    return exportParams.withEmails(emails);
                 }).thenAccept((params) -> exporter.export(params));
     }
 }
