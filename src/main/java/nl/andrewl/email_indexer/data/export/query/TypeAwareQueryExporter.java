@@ -5,18 +5,20 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
+import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
 import nl.andrewl.email_indexer.data.export.ExportException;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 import nl.andrewl.email_indexer.data.search.EmailIndexSearcher;
 
 /**
  * Query exporter that automatically invokes the right QueryExporter
  * using the provided file type.
  */
-public final class TypeAwareQueryExporter implements QueryExporter {
+public final class TypeAwareQueryExporter implements EmailDatasetExporter {
 
     @Override
-    public CompletableFuture<Void> export(QueryExporterParams exportParams) throws ExportException {
-        QueryExporter exporter = switch (exportParams.getOutputFileType()) {
+    public CompletableFuture<Void> export(ExporterParameters exportParams) {
+        EmailDatasetExporter exporter = switch (exportParams.getOutputFileType()) {
             case "txt" -> new PlainTextQueryExporter();
             case "pdf" -> new PdfQueryExporter();
             default ->

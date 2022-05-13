@@ -21,12 +21,14 @@ import com.itextpdf.text.pdf.PdfWriter;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.Tag;
+import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
 import nl.andrewl.email_indexer.data.export.ExportException;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 
 /**
  * Writes all information of a mailing thread into a PDF document.
  */
-public final class PdfQueryExporter implements QueryExporter {
+public final class PdfQueryExporter implements EmailDatasetExporter {
     public static Font HEADER_TEXT = FontFactory.getFont(FontFactory.COURIER, FontFactory.defaultEncoding,
             BaseFont.EMBEDDED, 16, Font.BOLD, BaseColor.BLACK);
     public static Font SUBHEADER_TEXT = FontFactory.getFont(FontFactory.COURIER, FontFactory.defaultEncoding,
@@ -35,14 +37,14 @@ public final class PdfQueryExporter implements QueryExporter {
             BaseFont.EMBEDDED, 11, Font.NORMAL, BaseColor.BLACK);
 
     @Override
-    public CompletableFuture<Void> export(QueryExporterParams exportParams) throws ExportException {
+    public CompletableFuture<Void> export(ExporterParameters exportParams) {
         if (exportParams.getEmails() == null) {
             throw new ExportException(
                     "Emails parameter cannot be null. In that case, use TypeAwareQueryExporter instead.");
         }
         Document metaDocument = makeMetaFile(exportParams);
         List<EmailEntryPreview> emails = exportParams.getEmails();
-        Path targetDirectory = exportParams.getOutputDirectory();
+        Path targetDirectory = exportParams.getOutputPath();
         for (int i = 0; i < emails.size(); i++) {
             EmailEntryPreview email = emails.get(i);
             String replyId = "#" + (i + 1);
@@ -56,9 +58,9 @@ public final class PdfQueryExporter implements QueryExporter {
         return null;
     }
 
-    private Document makeMetaFile(QueryExporterParams exportParams) {
+    private Document makeMetaFile(ExporterParameters exportParams) {
         Document document = new Document();
-        Path targetPath = Path.of(exportParams.getOutputDirectory().toString() + "/output.pdf");
+        Path targetPath = Path.of(exportParams.getOutputPath().toString() + "/output.pdf");
         createPdfInstance(document, targetPath);
         document.open();
         addText("Export Meta Data", document, HEADER_TEXT);
@@ -76,7 +78,7 @@ public final class PdfQueryExporter implements QueryExporter {
         return document;
     }
 
-    private void writeThreadInSeparateDocument(Path workingDir, QueryExporterParams exportParams,
+    private void writeThreadInSeparateDocument(Path workingDir, ExporterParameters exportParams,
             EmailEntryPreview email,
             String mailIndex) {
         Document document = new Document();
@@ -87,7 +89,7 @@ public final class PdfQueryExporter implements QueryExporter {
         document.close();
     }
 
-    private void writeThreadInDocument(Document document, QueryExporterParams exportParams, EmailEntryPreview email,
+    private void writeThreadInDocument(Document document, ExporterParameters exportParams, EmailEntryPreview email,
             String emailId) {
         EmailRepository repository = exportParams.getRepository();
         addText("Email " + emailId, document, HEADER_TEXT);

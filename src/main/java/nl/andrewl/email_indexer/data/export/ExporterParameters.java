@@ -1,4 +1,4 @@
-package nl.andrewl.email_indexer.data.export.query;
+package nl.andrewl.email_indexer.data.export;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -11,13 +11,13 @@ import nl.andrewl.email_indexer.data.TagRepository;
 /**
  * Parameter object for the EmailDatasetExporter.
  */
-public class QueryExporterParams {
+public class ExporterParameters {
     private String query = "";
     private EmailRepository repository = null;
     private TagRepository tagRepository = null;
     private EmailDataset dataset = null;
     private List<EmailEntryPreview> emails = null;
-    private Path outputDirectory = null;
+    private Path outputPath = null;
     private int maxResultCount = 100;
     private String outputFileType = "txt";
     private boolean separateMailingThreads = false;
@@ -38,8 +38,8 @@ public class QueryExporterParams {
         return dataset;
     }
 
-    public Path getOutputDirectory() {
-        return outputDirectory;
+    public Path getOutputPath() {
+        return outputPath;
     }
 
     public List<EmailEntryPreview> getEmails() {
@@ -58,47 +58,47 @@ public class QueryExporterParams {
         return separateMailingThreads;
     }
 
-    public QueryExporterParams withQuery(String query) {
+    public ExporterParameters withQuery(String query) {
         this.query = query;
         return this;
     }
 
-    public QueryExporterParams withRepository(EmailRepository repository) {
+    public ExporterParameters withRepository(EmailRepository repository) {
         this.repository = repository;
         return this;
     }
 
-    public QueryExporterParams withTagRepository(TagRepository tagRepository) {
+    public ExporterParameters withTagRepository(TagRepository tagRepository) {
         this.tagRepository = tagRepository;
         return this;
     }
 
-    public QueryExporterParams withDataset(EmailDataset dataset) {
+    public ExporterParameters withDataset(EmailDataset dataset) {
         this.dataset = dataset;
         return this;
     }
 
-    public QueryExporterParams withEmails(List<EmailEntryPreview> emails) {
+    public ExporterParameters withEmails(List<EmailEntryPreview> emails) {
         this.emails = emails;
         return this;
     }
 
-    public QueryExporterParams withOutputDirectory(Path outputDirectory) {
-        this.outputDirectory = outputDirectory;
+    public ExporterParameters withOutputPath(Path outputPath) {
+        this.outputPath = outputPath;
         return this;
     }
 
-    public QueryExporterParams withMaxResultCount(int maxResultCount) {
+    public ExporterParameters withMaxResultCount(int maxResultCount) {
         this.maxResultCount = maxResultCount;
         return this;
     }
 
-    public QueryExporterParams withOutputFileType(String fileType) {
+    public ExporterParameters withOutputFileType(String fileType) {
         this.outputFileType = fileType;
         return this;
     }
 
-    public QueryExporterParams withSeparateMailingThreads(boolean separateMailingThreads) {
+    public ExporterParameters withSeparateMailingThreads(boolean separateMailingThreads) {
         this.separateMailingThreads = separateMailingThreads;
         return this;
     }

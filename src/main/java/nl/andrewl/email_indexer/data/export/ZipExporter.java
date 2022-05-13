@@ -9,7 +9,9 @@ import java.util.concurrent.CompletableFuture;
 
 public class ZipExporter implements EmailDatasetExporter {
 	@Override
-	public CompletableFuture<Void> exportTo(EmailDataset ds, Path file) {
+	public CompletableFuture<Void> export(ExporterParameters exportParameters) {
+		Path file = exportParameters.getOutputPath();
+		EmailDataset ds = exportParameters.getDataset();
 		return Async.run(() -> {
 			if (Files.exists(file) && !file.getFileName().toString().endsWith(".zip")) {
 				throw new IllegalArgumentException("Cannot export dataset to non-zip file: " + file);
