@@ -9,6 +9,7 @@ import nl.andrewl.mboxparser.EmailHandler;
 
 import java.nio.file.Path;
 import java.sql.*;
+import java.time.ZonedDateTime;
 
 /**
  * This component parses a set of mbox files to build relational database
@@ -35,19 +36,26 @@ public class DatabaseGenerator implements AutoCloseable, EmailHandler {
 		}
 	}
 
-	public synchronized void addEmail(Email email) throws SQLException {
-		// First check that no email with this id exists yet.
-		this.emailExistsStatement.setString(1, email.messageId);
-		var rs = this.emailExistsStatement.executeQuery();
-		if (rs.next() && rs.getLong(1) > 0) return;
+	public void addEmail(Email email) throws SQLException {
+		addEmail(email.messageId, email.subject, email.inReplyTo, email.sentFrom, email.date, email.readBodyAsText());
+	}
 
-		this.emailInsertStatement.setString(1, email.messageId);
-		this.emailInsertStatement.setString(2, email.subject);
-		this.emailInsertStatement.setString(3, email.inReplyTo);
-		this.emailInsertStatement.setString(4, email.sentFrom);
-		this.emailInsertStatement.setObject(5, email.date);
-		this.emailInsertStatement.setString(6, email.readBodyAsText());
-		this.emailInsertStatement.executeUpdate();
+	public synchronized void addEmail(String messageId, String subject, String inReplyTo, String sentFrom, ZonedDateTime date, String body) throws SQLException {
+		emailExistsStatement.setString(1, messageId);
+		try (var rs = emailExistsStatement.executeQuery()) {
+			if (rs.next() && rs.getLong(1) > 0) return;
+		}
+		emailInsertStatement.setString(1, messageId);
+		emailInsertStatement.setString(2, subject);
+		emailInsertStatement.setString(3, inReplyTo);
+		emailInsertStatement.setString(4, sentFrom);
+		emailInsertStatement.setObject(5, date);
+		emailInsertStatement.setString(6, body);
+		emailInsertStatement.executeUpdate();
+	}
+
+	public Connection getConn() {
+		return this.conn;
 	}
 
 	/**
@@ -56,9 +64,8 @@ public class DatabaseGenerator implements AutoCloseable, EmailHandler {
 	 *     <li>Determine and set each email's PARENT_ID, based on their IN_REPLY_TO.</li>
 	 * </ul>
 	 * @param status A status tracker.
-	 * @throws SQLException If an error occurs.
 	 */
-	public synchronized void postProcess(Status status) throws SQLException {
+	public synchronized void postProcess(Status status) {
 		long count = DbUtils.count(conn, "SELECT COUNT(ID) FROM EMAIL WHERE IN_REPLY_TO IS NOT NULL");
 		status.sendMessage("Applying parent-id lookup for %d emails.".formatted(count));
 		final int pageSize = 1000;

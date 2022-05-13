@@ -14,6 +14,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -73,6 +74,12 @@ public class EmailDatasetGenerator {
 			status.sendMessage("Generating index.");
 			new EmailIndexGenerator(status).generateIndex(dataset);
 			dataset.close().join();
+
+			// Generate metadata
+			Properties props = new Properties();
+			props.setProperty("version", "2");
+			props.store(Files.newBufferedWriter(dataset.getMetadataFile()), null);
+
 			status.sendMessage("Dataset generation complete.");
 		});
 	}

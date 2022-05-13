@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -59,6 +60,35 @@ public class EmailDataset {
 
 	public Path getDatabaseFile() {
 		return this.openDir.resolve("database.mv.db");
+	}
+
+	public Path getMetadataFile() {
+		return this.openDir.resolve("metadata.properties");
+	}
+
+	/**
+	 * Gets the integer version number of this dataset.
+	 * @return The version number.
+	 * @throws IOException If an error occurs.
+	 */
+	public int getVersion() throws IOException {
+		Properties props = new Properties();
+		if (Files.exists(getMetadataFile())) {
+			props.load(Files.newBufferedReader(getMetadataFile()));
+			if (!props.containsKey("version")) {
+				props.setProperty("version", "1");
+				props.store(Files.newBufferedWriter(getMetadataFile()), null);
+			}
+		} else {
+			// No properties file exists. That means it must be version 1.
+			props.setProperty("version", "1");
+			props.store(Files.newBufferedWriter(getMetadataFile()), null);
+		}
+		try {
+			return Integer.parseInt(props.getProperty("version"));
+		} catch (NumberFormatException e) {
+			throw new IOException(e);
+		}
 	}
 
 	/**

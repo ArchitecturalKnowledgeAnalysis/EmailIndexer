@@ -38,6 +38,17 @@ public class EmailRepository {
 		return count(conn, "SELECT COUNT(DISTINCT EMAIL_ID) FROM EMAIL_TAG");
 	}
 
+	public Optional<Long> findId(String messageId) {
+		try (var stmt = conn.prepareStatement("SELECT ID FROM EMAIL WHERE MESSAGE_ID = ?")) {
+			stmt.setString(1, messageId);
+			var rs = stmt.executeQuery();
+			if (rs.next()) return Optional.of(rs.getLong(1));
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return Optional.empty();
+	}
+
 	/**
 	 * Fetches an email by its id.
 	 * @param id The email's id.
