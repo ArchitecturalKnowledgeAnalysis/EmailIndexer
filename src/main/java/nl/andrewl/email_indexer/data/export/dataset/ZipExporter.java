@@ -2,28 +2,31 @@ package nl.andrewl.email_indexer.data.export.dataset;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
-import nl.andrewl.email_indexer.data.export.ExporterParameters;
 import nl.andrewl.email_indexer.util.Async;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * An exporter that simply exports the dataset to a ZIP file archive.
+ */
 public class ZipExporter implements EmailDatasetExporter {
 	@Override
-	public CompletableFuture<Void> export(ExporterParameters exportParameters) {
-		Path file = exportParameters.getOutputPath();
-		EmailDataset ds = exportParameters.getDataset();
+	public CompletableFuture<Void> export(EmailDataset ds, Path path) {
 		return Async.run(() -> {
-			if (Files.exists(file) && !file.getFileName().toString().endsWith(".zip")) {
-				throw new IllegalArgumentException("Cannot export dataset to non-zip file: " + file);
+			if (Files.exists(path) && !path.getFileName().toString().endsWith(".zip")) {
+				throw new IllegalArgumentException("Cannot export dataset to non-zip file: " + path);
 			}
-			if (Files.isDirectory(file)) {
-				throw new IllegalArgumentException("Cannot export dataset to directory: " + file);
+			if (Files.isDirectory(path)) {
+				throw new IllegalArgumentException("Cannot export dataset to directory: " + path);
 			}
-		})
-				.thenAccept(unused -> ds.close())
-				.thenAccept(unused -> EmailDataset.buildZip(ds.getOpenDir(), file))
-				.thenCompose(unused -> Async.run(ds::establishConnection));
+			if (!Files.exists(path.getParent())) {
+				throw new IllegalArgumentException("Cannot export dataset into directory that doesn't exist.");
+			}
+			ds.close().join();
+			EmailDataset.buildZip(ds.getOpenDir(), path);
+			ds.establishConnection();
+		});
 	}
 }

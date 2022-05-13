@@ -1,6 +1,7 @@
 package nl.andrewl.email_indexer.data.search;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
+import nl.andrewl.email_indexer.util.Async;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
@@ -16,7 +17,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ForkJoinPool;
 
 /**
  * Component that provides methods for searching for emails using Lucene search
@@ -28,18 +28,11 @@ public class EmailIndexSearcher {
 	 * an ordered list of root email ids for threads containing relevant emails.
 	 * @param dataset The dataset to search.
 	 * @param queryString The query to use.
+	 * @param maxResults The maximum amount of results to return.
 	 * @return A future that completes when the search is done.
 	 */
-	public CompletableFuture<List<Long>> searchAsync(EmailDataset dataset, String queryString) {
-		CompletableFuture<List<Long>> cf = new CompletableFuture<>();
-		ForkJoinPool.commonPool().submit(() -> {
-			try {
-				cf.complete(search(dataset, queryString));
-			} catch (IOException | ParseException e) {
-				cf.completeExceptionally(e);
-			}
-		});
-		return cf;
+	public CompletableFuture<List<Long>> searchAsync(EmailDataset dataset, String queryString, int maxResults) {
+		return Async.supply(() -> search(dataset, queryString, maxResults));
 	}
 
 	/**
@@ -47,11 +40,12 @@ public class EmailIndexSearcher {
 	 * of root email ids for threads containing relevant emails.
 	 * @param dataset The dataset to search.
 	 * @param queryString The query to use.
+	 * @param maxResults The maximum amount of results to return.
 	 * @return A list of root email ids.
 	 * @throws IOException If an error occurs while opening the indexes.
 	 * @throws ParseException If the query is invalid.
 	 */
-	public List<Long> search(EmailDataset dataset, String queryString) throws IOException, ParseException {
+	public List<Long> search(EmailDataset dataset, String queryString, int maxResults) throws IOException, ParseException {
 		MultiFieldQueryParser queryParser = new MultiFieldQueryParser(
 				new String[]{"subject", "body"},
 				new StandardAnalyzer()
@@ -71,6 +65,7 @@ public class EmailIndexSearcher {
 					if (!rootIds.contains(rootId)) {
 						rootIds.add(rootId);
 						rootEmailIds.add(rootId);
+						if (rootEmailIds.size() == maxResults) break;
 					}
 				}
 			}
