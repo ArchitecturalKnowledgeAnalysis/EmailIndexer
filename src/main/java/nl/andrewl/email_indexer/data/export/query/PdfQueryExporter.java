@@ -21,14 +21,13 @@ import com.itextpdf.text.pdf.PdfWriter;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.Tag;
-import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
 import nl.andrewl.email_indexer.data.export.ExportException;
 import nl.andrewl.email_indexer.data.export.ExporterParameters;
 
 /**
  * Writes all information of a mailing thread into a PDF document.
  */
-public final class PdfQueryExporter implements EmailDatasetExporter {
+public final class PdfQueryExporter extends QueryExporter {
     public static Font HEADER_TEXT = FontFactory.getFont(FontFactory.COURIER, FontFactory.defaultEncoding,
             BaseFont.EMBEDDED, 16, Font.BOLD, BaseColor.BLACK);
     public static Font SUBHEADER_TEXT = FontFactory.getFont(FontFactory.COURIER, FontFactory.defaultEncoding,
@@ -37,7 +36,7 @@ public final class PdfQueryExporter implements EmailDatasetExporter {
             BaseFont.EMBEDDED, 11, Font.NORMAL, BaseColor.BLACK);
 
     @Override
-    public CompletableFuture<Void> export(ExporterParameters exportParams) {
+    public CompletableFuture<Void> doQueryExport(ExporterParameters exportParams) {
         if (exportParams.getEmails() == null) {
             throw new ExportException(
                     "Emails parameter cannot be null. In that case, use TypeAwareQueryExporter instead.");

@@ -1,6 +1,8 @@
-package nl.andrewl.email_indexer.data.export;
+package nl.andrewl.email_indexer.data.export.dataset;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
+import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 import nl.andrewl.email_indexer.util.Async;
 
 import java.nio.file.Files;

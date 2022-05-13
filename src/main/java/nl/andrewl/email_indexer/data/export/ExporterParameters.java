@@ -12,6 +12,12 @@ import nl.andrewl.email_indexer.data.TagRepository;
  * Parameter object for the EmailDatasetExporter.
  */
 public class ExporterParameters {
+    public static enum OutputType {
+        DATASET_ZIP,
+        QUERY_TXT, 
+        QUERY_PDF; 
+    }
+
     private String query = "";
     private EmailRepository repository = null;
     private TagRepository tagRepository = null;
@@ -19,7 +25,7 @@ public class ExporterParameters {
     private List<EmailEntryPreview> emails = null;
     private Path outputPath = null;
     private int maxResultCount = 100;
-    private String outputFileType = "txt";
+    private OutputType outputType;
     private boolean separateMailingThreads = false;
 
     public String getQuery() {
@@ -50,8 +56,8 @@ public class ExporterParameters {
         return maxResultCount;
     }
 
-    public String getOutputFileType() {
-        return outputFileType;
+    public OutputType getOutputType() {
+        return outputType;
     }
 
     public boolean mailingThreadsAreSeparate() {
@@ -93,8 +99,8 @@ public class ExporterParameters {
         return this;
     }
 
-    public ExporterParameters withOutputFileType(String fileType) {
-        this.outputFileType = fileType;
+    public ExporterParameters withOutputType(OutputType outputType) {
+        this.outputType = outputType;
         return this;
     }
 

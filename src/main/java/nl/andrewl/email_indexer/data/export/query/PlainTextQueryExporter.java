@@ -13,16 +13,15 @@ import nl.andrewl.email_indexer.data.EmailEntryPreview;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.Tag;
 import nl.andrewl.email_indexer.data.TagRepository;
-import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
 import nl.andrewl.email_indexer.data.export.ExportException;
 import nl.andrewl.email_indexer.data.export.ExporterParameters;
 
 /**
  * Exports query results to one or multiple plain-text files.
  */
-public final class PlainTextQueryExporter implements EmailDatasetExporter {
+public final class PlainTextQueryExporter extends QueryExporter {
     @Override
-    public CompletableFuture<Void> export(ExporterParameters exportParams) {
+    public CompletableFuture<Void> doQueryExport(ExporterParameters exportParams) {
         if (exportParams.getEmails() == null) {
             throw new ExportException(
                     "Emails parameter cannot be null. In that case, use TypeAwareQueryExporter instead.");
