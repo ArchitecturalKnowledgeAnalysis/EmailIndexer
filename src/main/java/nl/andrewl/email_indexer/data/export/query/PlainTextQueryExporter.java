@@ -13,8 +13,8 @@ import nl.andrewl.email_indexer.data.EmailEntryPreview;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.Tag;
 import nl.andrewl.email_indexer.data.TagRepository;
-import nl.andrewl.email_indexer.data.export.ExportException;
 import nl.andrewl.email_indexer.data.export.ExporterParameters;
+import nl.andrewl.email_indexer.util.Async;
 
 /**
  * Exports query results to one or multiple plain-text files.
@@ -22,12 +22,9 @@ import nl.andrewl.email_indexer.data.export.ExporterParameters;
 public final class PlainTextQueryExporter extends QueryExporter {
     @Override
     public CompletableFuture<Void> doQueryExport(ExporterParameters exportParams) {
-        if (exportParams.getEmails() == null) {
-            throw new ExportException(
-                    "Emails parameter cannot be null. In that case, use TypeAwareQueryExporter instead.");
-        }
-        Path outputPath = Path.of(exportParams.getOutputPath() + "/output.txt");
-        try (PrintWriter p = new PrintWriter(new FileWriter(outputPath.toFile()), false)) {
+        return Async.run(() -> {
+            Path outputPath = Path.of(exportParams.getOutputPath() + "/output.txt");
+            PrintWriter p = new PrintWriter(new FileWriter(outputPath.toFile()), false);
             writeMetadata(exportParams, p);
             List<EmailEntryPreview> emails = exportParams.getEmails();
             for (int i = 0; i < emails.size(); i++) {
@@ -38,10 +35,7 @@ public final class PlainTextQueryExporter extends QueryExporter {
                     writeThreadInDocument(exportParams, email, p, 0);
                 }
             }
-        } catch (IOException innerException) {
-            throw new ExportException("Could not export file.", innerException);
-        }
-        return null;
+        });
     }
 
     private void writeMetadata(ExporterParameters exportParams, PrintWriter p) {

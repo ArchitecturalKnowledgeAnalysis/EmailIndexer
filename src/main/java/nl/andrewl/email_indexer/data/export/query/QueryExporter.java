@@ -4,7 +4,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.List;
 import java.util.Objects;
 
-import nl.andrewl.email_indexer.data.export.ExportException;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
 import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
 import nl.andrewl.email_indexer.data.export.ExporterParameters;
@@ -15,9 +14,6 @@ public abstract class QueryExporter implements EmailDatasetExporter {
     public CompletableFuture<Void> export(ExporterParameters exportParams) {
         return new EmailIndexSearcher().searchAsync(exportParams.getDataset(), exportParams.getQuery())
                 .handleAsync((emailIds, throwable) -> {
-                    if (throwable != null) {
-                        throw new ExportException("An error occurred while exporting.", throwable);
-                    }
                     List<EmailEntryPreview> emails = emailIds.parallelStream()
                             .map(id -> exportParams.getRepository().findPreviewById(id).orElse(null))
                             .filter(Objects::nonNull)

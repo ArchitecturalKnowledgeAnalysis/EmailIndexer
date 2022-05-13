@@ -21,8 +21,8 @@ import com.itextpdf.text.pdf.PdfWriter;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.Tag;
-import nl.andrewl.email_indexer.data.export.ExportException;
 import nl.andrewl.email_indexer.data.export.ExporterParameters;
+import nl.andrewl.email_indexer.util.Async;
 
 /**
  * Writes all information of a mailing thread into a PDF document.
@@ -37,30 +37,27 @@ public final class PdfQueryExporter extends QueryExporter {
 
     @Override
     public CompletableFuture<Void> doQueryExport(ExporterParameters exportParams) {
-        if (exportParams.getEmails() == null) {
-            throw new ExportException(
-                    "Emails parameter cannot be null. In that case, use TypeAwareQueryExporter instead.");
-        }
-        Document metaDocument = makeMetaFile(exportParams);
-        List<EmailEntryPreview> emails = exportParams.getEmails();
-        Path targetDirectory = exportParams.getOutputPath();
-        for (int i = 0; i < emails.size(); i++) {
-            EmailEntryPreview email = emails.get(i);
-            String replyId = "#" + (i + 1);
-            if (exportParams.mailingThreadsAreSeparate()) {
-                writeThreadInSeparateDocument(targetDirectory, exportParams, email, replyId);
-            } else {
-                writeThreadInDocument(metaDocument, exportParams, email, replyId);
+        return Async.run(() -> {
+            Document metaDocument = makeMetaFile(exportParams);
+            List<EmailEntryPreview> emails = exportParams.getEmails();
+            Path targetDirectory = exportParams.getOutputPath();
+            for (int i = 0; i < emails.size(); i++) {
+                EmailEntryPreview email = emails.get(i);
+                String replyId = "#" + (i + 1);
+                if (exportParams.mailingThreadsAreSeparate()) {
+                    writeThreadInSeparateDocument(targetDirectory, exportParams, email, replyId);
+                } else {
+                    writeThreadInDocument(metaDocument, exportParams, email, replyId);
+                }
             }
-        }
-        metaDocument.close();
-        return null;
+            metaDocument.close();
+        });
     }
 
-    private Document makeMetaFile(ExporterParameters exportParams) {
+    private Document makeMetaFile(ExporterParameters exportParams) throws DocumentException, IOException {
         Document document = new Document();
         Path targetPath = Path.of(exportParams.getOutputPath().toString() + "/output.pdf");
-        createPdfInstance(document, targetPath);
+        PdfWriter.getInstance(document, new FileOutputStream(targetPath.toString()));
         document.open();
         addText("Export Meta Data", document, HEADER_TEXT);
         addText("Query:", document, SUBHEADER_TEXT);
@@ -79,17 +76,17 @@ public final class PdfQueryExporter extends QueryExporter {
 
     private void writeThreadInSeparateDocument(Path workingDir, ExporterParameters exportParams,
             EmailEntryPreview email,
-            String mailIndex) {
+            String mailIndex) throws DocumentException, IOException {
         Document document = new Document();
         Path targetPath = Path.of(workingDir.toString() + "/email-" + mailIndex + ".pdf");
-        createPdfInstance(document, targetPath);
+        PdfWriter.getInstance(document, new FileOutputStream(targetPath.toString()));
         document.open();
         writeThreadInDocument(document, exportParams, email, mailIndex);
         document.close();
     }
 
     private void writeThreadInDocument(Document document, ExporterParameters exportParams, EmailEntryPreview email,
-            String emailId) {
+            String emailId) throws DocumentException {
         EmailRepository repository = exportParams.getRepository();
         addText("Email " + emailId, document, HEADER_TEXT);
         addText("Subject:", document, SUBHEADER_TEXT);
@@ -106,9 +103,12 @@ public final class PdfQueryExporter extends QueryExporter {
         List<EmailEntryPreview> replies = repository.findAllReplies(email.id());
         addText(replies.size() + "\n\n", document, REGULAR_TEXT);
         addText("Body:\n\n", document, SUBHEADER_TEXT);
-        repository.getBody(email.id()).ifPresent(body -> {
-            addText(body, document, REGULAR_TEXT);
-        });
+        String body = "";
+        try {
+            body = repository.getBody(email.id()).get();
+        } catch (Exception ignored) {
+        }
+        addText(body, document, REGULAR_TEXT);
         document.newPage();
         for (int i = 0; i < replies.size(); i++) {
             EmailEntryPreview reply = replies.get(i);
@@ -117,23 +117,9 @@ public final class PdfQueryExporter extends QueryExporter {
         }
     }
 
-    private void addText(String text, Document document, Font font) throws ExportException {
+    private void addText(String text, Document document, Font font) throws DocumentException {
         Chunk chunk = new Chunk(text, font);
         Paragraph paragraph = new Paragraph(chunk);
-        try {
-            document.add(paragraph);
-        } catch (DocumentException innerException) {
-            throw new ExportException("Could not write do document.", innerException);
-        }
-    }
-
-    private void createPdfInstance(Document document, Path targetPath) throws ExportException {
-        try {
-            PdfWriter.getInstance(document, new FileOutputStream(targetPath.toString()));
-        } catch (DocumentException innerException) {
-            throw new ExportException("Could not create PDF instance.", innerException);
-        } catch (IOException innerException) {
-            throw new ExportException("Could not create output stream.", innerException);
-        }
+        document.add(paragraph);
     }
 }
