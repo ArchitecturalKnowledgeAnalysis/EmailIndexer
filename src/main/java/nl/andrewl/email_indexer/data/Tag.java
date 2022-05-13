@@ -26,4 +26,9 @@ public record Tag(
 	public int compareTo(Tag o) {
 		return name.compareToIgnoreCase(o.name);
 	}
+
+	@Override
+	public String toString() {
+		return name;
+	}
 }
