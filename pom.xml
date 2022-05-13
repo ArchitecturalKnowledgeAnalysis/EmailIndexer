@@ -6,7 +6,7 @@
 
     <groupId>nl.andrewl</groupId>
     <artifactId>emailindexer</artifactId>
-    <version>2.0.5</version>
+    <version>2.1.0</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -20,7 +20,6 @@
             <artifactId>MBoxParser</artifactId>
             <version>v1.2.2</version>
         </dependency>
-
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>
@@ -55,6 +54,16 @@
             <artifactId>junit-jupiter-api</artifactId>
             <version>5.8.2</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itextpdf</artifactId>
+            <version>5.5.13</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.26</version>
         </dependency>
     </dependencies>
 

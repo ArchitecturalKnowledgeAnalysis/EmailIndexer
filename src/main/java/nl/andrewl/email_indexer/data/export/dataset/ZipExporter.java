@@ -1,6 +1,8 @@
-package nl.andrewl.email_indexer.data.export;
+package nl.andrewl.email_indexer.data.export.dataset;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
+import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 import nl.andrewl.email_indexer.util.Async;
 
 import java.nio.file.Files;
@@ -9,7 +11,9 @@ import java.util.concurrent.CompletableFuture;
 
 public class ZipExporter implements EmailDatasetExporter {
 	@Override
-	public CompletableFuture<Void> exportTo(EmailDataset ds, Path file) {
+	public CompletableFuture<Void> export(ExporterParameters exportParameters) {
+		Path file = exportParameters.getOutputPath();
+		EmailDataset ds = exportParameters.getDataset();
 		return Async.run(() -> {
 			if (Files.exists(file) && !file.getFileName().toString().endsWith(".zip")) {
 				throw new IllegalArgumentException("Cannot export dataset to non-zip file: " + file);
