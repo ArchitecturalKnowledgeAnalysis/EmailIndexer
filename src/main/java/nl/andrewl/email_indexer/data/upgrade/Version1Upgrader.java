@@ -15,7 +15,7 @@ import java.util.Properties;
  * Upgrades datasets from version 1 to the latest version.
  */
 public class Version1Upgrader {
-	void upgrade(Path originalDatasetPath, Path newDatasetDir) throws Exception {
+	public void upgrade(Path originalDatasetPath, Path newDatasetDir) throws Exception {
 		EmailDataset ds1 = EmailDataset.open(originalDatasetPath).join();
 
 		if (!Files.exists(newDatasetDir)) {
@@ -35,18 +35,18 @@ public class Version1Upgrader {
 		try (var dbGen = new DatabaseGenerator(newDatasetDir.resolve("database"))) {
 			// Copy emails.
 			try (
-					var stmt = ds1.getConnection().prepareStatement("SELECT * FROM EMAIL ORDER BY DATE")
+				var stmt = ds1.getConnection().prepareStatement("SELECT * FROM EMAIL ORDER BY DATE")
 			) {
 				var rs = stmt.executeQuery();
 				while (rs.next()) {
 					String msgId = rs.getString("MESSAGE_ID");
 					dbGen.addEmail(
-							msgId,
-							rs.getString("SUBJECT"),
-							rs.getString("IN_REPLY_TO"),
-							rs.getString("SENT_FROM"),
-							rs.getObject("DATE", ZonedDateTime.class),
-							rs.getString("BODY")
+						msgId,
+						rs.getString("SUBJECT"),
+						rs.getString("IN_REPLY_TO"),
+						rs.getString("SENT_FROM"),
+						rs.getObject("DATE", ZonedDateTime.class),
+						rs.getString("BODY")
 					);
 				}
 			}
@@ -54,7 +54,7 @@ public class Version1Upgrader {
 			TagRepository tagRepo = new TagRepository(dbGen.getConn());
 			EmailRepository emailRepo = new EmailRepository(dbGen.getConn());
 			try (
-					var stmt = ds1.getConnection().prepareStatement("SELECT * FROM EMAIL_TAG")
+				var stmt = ds1.getConnection().prepareStatement("SELECT * FROM EMAIL_TAG")
 			) {
 				var rs = stmt.executeQuery();
 				while (rs.next()) {
@@ -65,10 +65,10 @@ public class Version1Upgrader {
 					});
 				}
 			}
-			// Copy mutations (ignore MUTATION_EMAIL link. This is too much trouble to insert.
+			// Copy mutations (ignore MUTATION_EMAIL link. This is too much trouble to insert.)
 			try (
-					var stmt = ds1.getConnection().prepareStatement("SELECT * FROM MUTATION");
-					var insertStmt = ds1.getConnection().prepareStatement("INSERT INTO MUTATION (ID, DESCRIPTION, PERFORMED_AT, AFFECTED_EMAIL_COUNT) VALUES (?, ?, ?, ?)")
+				var stmt = ds1.getConnection().prepareStatement("SELECT * FROM MUTATION");
+				var insertStmt = ds1.getConnection().prepareStatement("INSERT INTO MUTATION (ID, DESCRIPTION, PERFORMED_AT, AFFECTED_EMAIL_COUNT) VALUES (?, ?, ?, ?)")
 			) {
 				var rs = stmt.executeQuery();
 				while (rs.next()) {
