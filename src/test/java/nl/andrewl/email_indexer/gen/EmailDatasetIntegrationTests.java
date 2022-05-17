@@ -46,6 +46,7 @@ public class EmailDatasetIntegrationTests {
 		long id = optionalEmail.get();
 		var tagRepo = new TagRepository(ds);
 		tagRepo.addTag(id, "test");
+		assertTrue(tagRepo.hasTag(id, "test"));
 		assertTrue(tagRepo.findAll().stream().anyMatch(tag -> tag.name().equals("test")));
 		tagRepo.addTag(id, "test");
 
