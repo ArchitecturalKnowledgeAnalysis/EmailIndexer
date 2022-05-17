@@ -68,7 +68,7 @@ public class Version1Upgrader {
 			// Copy mutations (ignore MUTATION_EMAIL link. This is too much trouble to insert.)
 			try (
 				var stmt = ds1.getConnection().prepareStatement("SELECT * FROM MUTATION");
-				var insertStmt = ds1.getConnection().prepareStatement("INSERT INTO MUTATION (ID, DESCRIPTION, PERFORMED_AT, AFFECTED_EMAIL_COUNT) VALUES (?, ?, ?, ?)")
+				var insertStmt = dbGen.getConn().prepareStatement("INSERT INTO MUTATION (ID, DESCRIPTION, PERFORMED_AT, AFFECTED_EMAIL_COUNT) VALUES (?, ?, ?, ?)")
 			) {
 				var rs = stmt.executeQuery();
 				while (rs.next()) {
