@@ -1,10 +1,14 @@
 package nl.andrewl.email_indexer.gen;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
+import nl.andrewl.email_indexer.data.EmailEntry;
+import nl.andrewl.email_indexer.data.EmailRepository;
+import nl.andrewl.email_indexer.data.TagRepository;
 import nl.andrewl.email_indexer.data.export.query.PdfQueryExporter;
 import nl.andrewl.email_indexer.data.export.query.PlainTextQueryExporter;
 import nl.andrewl.email_indexer.data.export.query.QueryExportParams;
 import nl.andrewl.email_indexer.data.search.EmailIndexSearcher;
+import nl.andrewl.email_indexer.util.DbUtils;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.h2.store.fs.FileUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,6 +36,19 @@ public class EmailDatasetIntegrationTests {
 		EmailDataset ds = genDataset("__test_gen");
 		var results = new EmailIndexSearcher().search(ds, "t*", 100);
 		assertTrue(results.size() > 0);
+
+		var optionalEmail = DbUtils.fetchOne(
+				ds.getConnection(),
+				"SELECT ID FROM EMAIL LIMIT 1",
+				rs -> rs.getLong(1)
+		);
+		assertTrue(optionalEmail.isPresent());
+		long id = optionalEmail.get();
+		var tagRepo = new TagRepository(ds);
+		tagRepo.addTag(id, "test");
+		assertTrue(tagRepo.findAll().stream().anyMatch(tag -> tag.name().equals("test")));
+		tagRepo.addTag(id, "test");
+
 		ds.close().join();
 	}
 

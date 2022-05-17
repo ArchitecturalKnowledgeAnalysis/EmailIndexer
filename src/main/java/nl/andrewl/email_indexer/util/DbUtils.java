@@ -121,26 +121,17 @@ public final class DbUtils {
 	public static void doTransaction(Connection c, Transaction tx) {
 		try {
 			c.setAutoCommit(false);
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return;
-		}
-		try {
-			tx.doTransaction(c);
-			c.commit();
-		} catch (SQLException e) {
-			e.printStackTrace();
 			try {
+				tx.doTransaction(c);
+				c.commit();
+			} catch (SQLException e) {
+				e.printStackTrace();
 				c.rollback();
-			} catch (SQLException e1) {
-				throw new IllegalStateException(e1);
 			}
-		} finally {
-			try {
-				c.setAutoCommit(true);
-			} catch (SQLException e1) {
-				throw new IllegalStateException(e1);
-			}
+			c.setAutoCommit(true);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
 	}
 }
