@@ -1,8 +1,6 @@
 package nl.andrewl.email_indexer.gen;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
-import nl.andrewl.email_indexer.data.EmailEntry;
-import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.TagRepository;
 import nl.andrewl.email_indexer.data.export.query.PdfQueryExporter;
 import nl.andrewl.email_indexer.data.export.query.PlainTextQueryExporter;
@@ -40,8 +38,7 @@ public class EmailDatasetIntegrationTests {
 		var optionalEmail = DbUtils.fetchOne(
 				ds.getConnection(),
 				"SELECT ID FROM EMAIL LIMIT 1",
-				rs -> rs.getLong(1)
-		);
+				rs -> rs.getLong(1));
 		assertTrue(optionalEmail.isPresent());
 		long id = optionalEmail.get();
 		var tagRepo = new TagRepository(ds);
@@ -54,14 +51,26 @@ public class EmailDatasetIntegrationTests {
 	}
 
 	@Test
-	public void testExports() {
+	public void testExportsSeparated() {
 		EmailDataset ds = genDataset("__test_export");
 		var params = new QueryExportParams()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
 				.withSeparateEmailThreads(true);
-		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-txt")).join();
-		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-pdf")).join();
+		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-separated-txt")).join();
+		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-separated-pdf")).join();
+		ds.close().join();
+	}
+
+	@Test
+	public void testExportsMerged() {
+		EmailDataset ds = genDataset("__test_export");
+		var params = new QueryExportParams()
+				.withQuery("t* r* s* e*")
+				.withMaxResultCount(10)
+				.withSeparateEmailThreads(false);
+		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-txt.txt")).join();
+		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-pdf.pdf")).join();
 		ds.close().join();
 	}
 

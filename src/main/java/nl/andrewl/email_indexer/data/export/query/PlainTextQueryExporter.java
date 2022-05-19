@@ -34,15 +34,19 @@ public final class PlainTextQueryExporter extends QueryExporter {
     @Override
     protected void beforeExport(EmailDataset ds, Path path) throws IOException {
         outputDir = path;
-        if (!Files.exists(outputDir)) {
+        if (this.params.isSeparateEmailThreads() && !Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
-        printWriter = new PrintWriter(Files.newBufferedWriter(outputDir.resolve(MAIN_OUTPUT_FILE)), false);
+        Path pwPath = this.params.isSeparateEmailThreads()
+                ? outputDir.resolve(MAIN_OUTPUT_FILE)
+                : outputDir;
+        printWriter = new PrintWriter(Files.newBufferedWriter(pwPath), false);
         writeMetadata(ds);
     }
 
     @Override
-    protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo) throws IOException {
+    protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
+            throws IOException {
         if (params.isSeparateEmailThreads()) {
             writeThreadInSeparateDocument(email, rank, emailRepo, tagRepo);
         } else {
@@ -64,16 +68,17 @@ public final class PlainTextQueryExporter extends QueryExporter {
                 params.getQuery(),
                 ZonedDateTime.now().toString(),
                 new TagRepository(ds).findAll().stream().map(Tag::name).collect(Collectors.joining(", ")),
-                params.getResultCount()
-        ));
+                params.getResultCount()));
         printWriter.println();
     }
 
     /**
      * Creates a new document and writes the mailing thread in it.
      */
-    private void writeThreadInSeparateDocument(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo) throws IOException {
-        try (PrintWriter p = new PrintWriter(Files.newBufferedWriter(outputDir.resolve("email-" + rank + ".txt")), false)) {
+    private void writeThreadInSeparateDocument(EmailEntry email, int rank, EmailRepository emailRepo,
+            TagRepository tagRepo) throws IOException {
+        try (PrintWriter p = new PrintWriter(Files.newBufferedWriter(outputDir.resolve("email-" + rank + ".txt")),
+                false)) {
             writeThreadInDocument(email, emailRepo, tagRepo, p, 0);
         }
     }
@@ -81,7 +86,8 @@ public final class PlainTextQueryExporter extends QueryExporter {
     /**
      * Writes all information of a mailing thread into a plain-text document.
      */
-    private void writeThreadInDocument(EmailEntry email, EmailRepository emailRepo, TagRepository tagRepo, PrintWriter p, int indentLevel) {
+    private void writeThreadInDocument(EmailEntry email, EmailRepository emailRepo, TagRepository tagRepo,
+            PrintWriter p, int indentLevel) {
         String indent = "\t".repeat(indentLevel);
         p.println(indent + "Message id: " + email.messageId());
         p.println(indent + "Subject: " + email.subject());

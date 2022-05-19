@@ -39,20 +39,23 @@ public final class PdfQueryExporter extends QueryExporter {
     @Override
     protected void beforeExport(EmailDataset ds, Path path) throws IOException {
         outputDir = path;
-        if (!Files.exists(outputDir)) {
+        if (this.params.isSeparateEmailThreads() && !Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
         emailRepo = new EmailRepository(ds);
         tagRepo = new TagRepository(ds);
         try {
-            mainDocument = makeMetaFile(ds, path.resolve(MAIN_OUTPUT_FILE));
+            mainDocument = this.params.isSeparateEmailThreads()
+                    ? makeMetaFile(ds, path.resolve(MAIN_OUTPUT_FILE))
+                    : makeMetaFile(ds, path);
         } catch (DocumentException e) {
             throw new IOException(e);
         }
     }
 
     @Override
-    protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo) throws IOException {
+    protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
+            throws IOException {
         try {
             if (params.isSeparateEmailThreads()) {
                 writeThreadInSeparateDocument(email, Integer.toString(rank));
