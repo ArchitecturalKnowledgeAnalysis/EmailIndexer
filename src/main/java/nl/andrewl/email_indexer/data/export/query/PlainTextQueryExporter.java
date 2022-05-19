@@ -77,7 +77,7 @@ public final class PlainTextQueryExporter extends QueryExporter {
      */
     private void writeThreadInSeparateDocument(EmailEntry email, int rank, EmailRepository emailRepo,
             TagRepository tagRepo) throws IOException {
-        try (PrintWriter p = new PrintWriter(Files.newBufferedWriter(outputDir.resolve("email-" + rank + ".txt")),
+        try (PrintWriter p = new PrintWriter(Files.newBufferedWriter(outputDir.resolve("emailthread-" + rank + ".txt")),
                 false)) {
             writeThreadInDocument(email, emailRepo, tagRepo, p, 0);
         }

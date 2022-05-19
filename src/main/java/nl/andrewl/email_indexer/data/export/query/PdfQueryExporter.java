@@ -92,7 +92,7 @@ public final class PdfQueryExporter extends QueryExporter {
 
     private void writeThreadInSeparateDocument(EmailEntry email, String index) throws DocumentException, IOException {
         Document document = new Document();
-        Path targetPath = outputDir.resolve("email-" + index + ".pdf");
+        Path targetPath = outputDir.resolve("emailthread-" + index + ".pdf");
         PdfWriter.getInstance(document, new FileOutputStream(targetPath.toString()));
         document.open();
         writeThreadInDocument(document, email, index);
