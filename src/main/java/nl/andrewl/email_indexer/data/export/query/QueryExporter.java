@@ -71,6 +71,11 @@ public abstract class QueryExporter implements EmailDatasetExporter {
      */
     protected abstract void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo) throws IOException;
 
+    /**
+     * This method is called after all emails have been exported, to do cleanup
+     * operations and add any final touches to the export.
+     * @throws IOException If an error occurs while finalizing the export.
+     */
     protected void afterExport() throws IOException {
         // Do nothing by default; children may override this.
     }

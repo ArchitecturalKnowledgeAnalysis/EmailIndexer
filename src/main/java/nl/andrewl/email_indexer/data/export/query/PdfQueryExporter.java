@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Writes all information of a mailing thread into one or more PDF files inside
- * a specific directory.
+ * Writes all information of a mailing thread into a single PDF, or multiple
+ * PDFs in a directory.
  */
 public final class PdfQueryExporter extends QueryExporter {
     public static final String MAIN_OUTPUT_FILE = "output.pdf";

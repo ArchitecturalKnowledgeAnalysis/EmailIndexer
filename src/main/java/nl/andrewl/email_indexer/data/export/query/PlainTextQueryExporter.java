@@ -11,8 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Exports query results to one or multiple plain-text files in a specific
- * directory.
+ * Exports query results to a single file, or multiple files in a directory.
  */
 public final class PlainTextQueryExporter extends QueryExporter {
     private static final String MAIN_OUTPUT_FILE = "output.txt";
