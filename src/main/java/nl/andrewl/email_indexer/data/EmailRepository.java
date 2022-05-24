@@ -111,6 +111,24 @@ public class EmailRepository {
 	}
 
 	/**
+	 * Finds the number of replies that exist for an email.
+	 * @param id The parent email's id.
+	 * @return The number of replies to the given email.
+	 */
+	public long countReplies(long id) {
+		return count(conn, "SELECT COUNT(ID) FROM EMAIL WHERE EMAIL.PARENT_ID = ?", id);
+	}
+
+	/**
+	 * Determines if an email has any replies.
+	 * @param id The parent email id.
+	 * @return True if this email has at least one reply, or false if not.
+	 */
+	public boolean hasReplies(long id) {
+		return countReplies(id) == 0;
+	}
+
+	/**
 	 * Gets just the body of an email identified by the given id.
 	 * @param id The id of the email whose body to get.
 	 * @return The body of the requested email.
