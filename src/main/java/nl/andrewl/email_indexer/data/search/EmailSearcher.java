@@ -38,11 +38,34 @@ public class EmailSearcher {
 	 * @return A search result.
 	 */
 	public CompletableFuture<EmailSearchResult> findAll(int page, int size, Collection<SearchFilter> filters) {
+		return findAll(page, size, filters, false);
+	}
+
+	/**
+	 * Searches over the collection of all emails.
+	 * @param page The page of results to get. Starts at 1.
+	 * @param size The size of each page.
+	 * @param filters The filters to apply.
+	 * @param debug Whether to enable debug printing of the queries.
+	 * @return A search result.
+	 */
+	public CompletableFuture<EmailSearchResult> findAll(int page, int size, Collection<SearchFilter> filters, boolean debug) {
 		return Async.supply(() -> {
 			List<EmailEntryPreview> entries = new ArrayList<>(size);
+			String searchQuery = getSearchQuery(page, size, filters);
+			String countQuery = getSearchCountQuery(filters);
+			if (debug) {
+				System.out.printf(
+						"Searching for page %d of %d emails:%nUsing query:%n%s%nAnd count query:%n%s%n",
+						page,
+						size,
+						searchQuery,
+						countQuery
+				);
+			}
 			try (
-				var queryStmt = conn.prepareStatement(getSearchQuery(page, size, filters));
-				var countStmt = conn.prepareStatement(getSearchCountQuery(filters))
+				var queryStmt = conn.prepareStatement(searchQuery);
+				var countStmt = conn.prepareStatement(countQuery)
 			) {
 				var queryRs = queryStmt.executeQuery();
 				while (queryRs.next()) entries.add(new EmailEntryPreview(queryRs));
