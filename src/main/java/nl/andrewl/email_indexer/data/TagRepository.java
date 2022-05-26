@@ -23,10 +23,20 @@ public class TagRepository {
 		this.conn = ds.getConnection();
 	}
 
+	/**
+	 * Gets a tag by its id.
+	 * @param id The tag's id.
+	 * @return An optional that contains the tag, if it exists.
+	 */
 	public Optional<Tag> getTagById(int id) {
 		return DbUtils.fetchOne(conn, QueryCache.load("/sql/tag/fetch_tag_by_id.sql"), Tag::new, id);
 	}
 
+	/**
+	 * Gets a tag by its name.
+	 * @param name The tag's name.
+	 * @return An optional that contains the tag, if it exists.
+	 */
 	public Optional<Tag> getTagByName(String name) {
 		return DbUtils.fetchOne(conn, QueryCache.load("/sql/tag/fetch_tag_by_name.sql"), Tag::new, name);
 	}
@@ -45,6 +55,15 @@ public class TagRepository {
 	 */
 	public int countTags() {
 		return (int) count(conn, "SELECT COUNT(ID) FROM TAG");
+	}
+
+	/**
+	 * Counts the number of emails that have a given tag.
+	 * @param tagId The id of the tag.
+	 * @return The number of emails with the tag.
+	 */
+	public long countTaggedEmails(int tagId) {
+		return DbUtils.count(conn, "SELECT COUNT(EMAIL_ID) FROM EMAIL_TAG WHERE TAG_ID = ?", tagId);
 	}
 
 	/**
@@ -72,7 +91,7 @@ public class TagRepository {
 	 * any trace of this tag being applied to any emails.
 	 * @param id The id of the tag to delete.
 	 */
-	public void deleteTag(long id) {
+	public void deleteTag(int id) {
 		update(conn, "DELETE FROM TAG WHERE ID = ?", id);
 	}
 
@@ -90,7 +109,7 @@ public class TagRepository {
 	 * @param tagId The id of the tag.
 	 * @param newDescription The new description.
 	 */
-	public void setDescription(long tagId, String newDescription) {
+	public void setDescription(int tagId, String newDescription) {
 		update(conn, "UPDATE TAG SET DESCRIPTION = ? WHERE ID = ?", newDescription, tagId);
 	}
 
@@ -100,7 +119,7 @@ public class TagRepository {
 	 * @param newName The new name. This should not be null, and it should be
 	 *                unique. No other tag should exist. {@link TagRepository#tagExists(String)}
 	 */
-	public void setName(long tagId, String newName) {
+	public void setName(int tagId, String newName) {
 		update(conn, "UPDATE TAG SET NAME = ? WHERE ID = ?", newName, tagId);
 	}
 
