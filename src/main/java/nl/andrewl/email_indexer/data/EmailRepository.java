@@ -120,6 +120,20 @@ public class EmailRepository {
 	}
 
 	/**
+	 * Finds the number of replies that exist for an email, and all replies
+	 * to those, and so on.
+	 * @param id The parent email's id.
+	 * @return The total number of replies to the given email, including children.
+	 */
+	public long countRepliesRecursive(long id) {
+		int sum = 0;
+		for (var reply : findAllReplies(id)) {
+			sum += 1 + countRepliesRecursive(reply.id());
+		}
+		return sum;
+	}
+
+	/**
 	 * Determines if an email has any replies.
 	 * @param id The parent email id.
 	 * @return True if this email has at least one reply, or false if not.
