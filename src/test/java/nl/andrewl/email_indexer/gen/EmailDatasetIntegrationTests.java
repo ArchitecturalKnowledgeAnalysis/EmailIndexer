@@ -1,7 +1,9 @@
 package nl.andrewl.email_indexer.gen;
 
 import nl.andrewl.email_indexer.data.EmailDataset;
+import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.TagRepository;
+import nl.andrewl.email_indexer.data.export.dataset.ZipExporter;
 import nl.andrewl.email_indexer.data.export.query.PdfQueryExporter;
 import nl.andrewl.email_indexer.data.export.query.PlainTextQueryExporter;
 import nl.andrewl.email_indexer.data.export.query.QueryExportParams;
@@ -14,9 +16,10 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * A test which runs through some common dataset workflows.
@@ -52,7 +55,7 @@ public class EmailDatasetIntegrationTests {
 
 	@Test
 	public void testExportsSeparated() {
-		EmailDataset ds = genDataset("__test_export");
+		EmailDataset ds = genDataset("__test_export_separated");
 		var params = new QueryExportParams()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
@@ -64,13 +67,27 @@ public class EmailDatasetIntegrationTests {
 
 	@Test
 	public void testExportsMerged() {
-		EmailDataset ds = genDataset("__test_export");
+		EmailDataset ds = genDataset("__test_export_merged");
 		var params = new QueryExportParams()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
 				.withSeparateEmailThreads(false);
 		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-txt.txt")).join();
 		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-pdf.pdf")).join();
+		ds.close().join();
+	}
+
+	@Test
+	public void testZipExporter() throws SQLException {
+		EmailDataset ds = genDataset("__test_export_zip");
+		Path zipFile = TEST_DIR.resolve("__test_export_zip.zip");
+		long emailCount = new EmailRepository(ds).countEmails();
+		new ZipExporter().export(ds, zipFile).join();
+		assertFalse(ds.getConnection().isClosed(), "ZipExporter should reopen connection after the export.");
+		ds.close().join();
+		// Reopen and check that it's the same.
+		ds = EmailDataset.open(zipFile).join();
+		assertEquals(emailCount, new EmailRepository(ds).countEmails());
 		ds.close().join();
 	}
 

@@ -12,9 +12,16 @@ import java.util.concurrent.CompletableFuture;
 public interface EmailDatasetExporter {
 	/**
 	 * Exports a dataset to the given path.
+	 * <p>
+	 *     You may assume that the dataset is inaccessible to other processes
+	 *     during an export, and should not be modified until the returned
+	 *     future completes.
+	 * </p>
 	 * @param ds The dataset to export.
 	 * @param path The path to export to.
-	 * @return A future that completes when the dataset has been exported.
+	 * @return A future that completes when the dataset has been exported. This
+	 * future may complete exceptionally if an error occurs while exporting the
+	 * dataset.
 	 */
 	CompletableFuture<Void> export(EmailDataset ds, Path path);
 }

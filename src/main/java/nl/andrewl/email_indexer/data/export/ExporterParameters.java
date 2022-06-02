@@ -12,11 +12,11 @@ import nl.andrewl.email_indexer.data.TagRepository;
  * Parameter object for the EmailDatasetExporter.
  */
 public class ExporterParameters {
-    public static enum OutputType {
+    public enum OutputType {
         UNSET,
         DATASET_ZIP,
-        QUERY_TXT, 
-        QUERY_PDF; 
+        QUERY_TXT,
+        QUERY_PDF
     }
 
     private String query = "";
