@@ -7,6 +7,7 @@ import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailEntryPreview;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.TagRepository;
+import nl.andrewl.email_indexer.data.search.SearchFilter;
 
 /**
  * Parameter object for the EmailDatasetExporter.
@@ -25,6 +26,7 @@ public class ExporterParameters {
     private EmailDataset dataset = null;
     private List<EmailEntryPreview> emails = null;
     private Path outputPath = null;
+    private SearchFilter searchFilter = null;
     private int maxResultCount = 100;
     private OutputType outputType = OutputType.UNSET;
     private boolean separateMailingThreads = false;
@@ -59,6 +61,15 @@ public class ExporterParameters {
 
     public OutputType getOutputType() {
         return outputType;
+    }
+
+    public SearchFilter getFilter()  {
+        return searchFilter;
+    }
+
+    public ExporterParameters withSearchFilter(SearchFilter searchFilter) {
+        this.searchFilter = searchFilter;
+        return this;
     }
 
     public boolean mailingThreadsAreSeparate() {

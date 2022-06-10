@@ -1,6 +1,7 @@
 package nl.andrewl.email_indexer.data.export.query;
 
 import nl.andrewl.email_indexer.data.*;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -26,17 +27,17 @@ public final class PlainTextQueryExporter extends QueryExporter {
      */
     private Path outputDir;
 
-    public PlainTextQueryExporter(QueryExportParams params) {
+    public PlainTextQueryExporter(ExporterParameters params) {
         super(params);
     }
 
     @Override
     protected void beforeExport(EmailDataset ds, Path path) throws IOException {
         outputDir = path;
-        if (this.params.isSeparateEmailThreads() && !Files.exists(outputDir)) {
+        if (this.params.mailingThreadsAreSeparate() && !Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
-        Path pwPath = this.params.isSeparateEmailThreads()
+        Path pwPath = this.params.mailingThreadsAreSeparate()
                 ? outputDir.resolve(MAIN_OUTPUT_FILE)
                 : outputDir;
         printWriter = new PrintWriter(Files.newBufferedWriter(pwPath), false);
@@ -46,7 +47,7 @@ public final class PlainTextQueryExporter extends QueryExporter {
     @Override
     protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
             throws IOException {
-        if (params.isSeparateEmailThreads()) {
+        if (params.mailingThreadsAreSeparate()) {
             writeThreadInSeparateDocument(email, rank, emailRepo, tagRepo);
         } else {
             writeThreadInDocument(email, emailRepo, tagRepo, printWriter, 0);
@@ -67,7 +68,7 @@ public final class PlainTextQueryExporter extends QueryExporter {
                 params.getQuery(),
                 ZonedDateTime.now().toString(),
                 new TagRepository(ds).findAll().stream().map(Tag::name).collect(Collectors.joining(", ")),
-                params.getResultCount()));
+                params.getMaxResultCount()));
         printWriter.println();
     }
 

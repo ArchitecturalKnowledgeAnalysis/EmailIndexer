@@ -1,6 +1,8 @@
 package nl.andrewl.email_indexer.data.export.query;
 
 import nl.andrewl.email_indexer.data.*;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
+
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 
@@ -26,7 +28,7 @@ public class CsvQueryExporter extends QueryExporter {
 
 	private CSVPrinter printer;
 
-	public CsvQueryExporter(QueryExportParams params) {
+	public CsvQueryExporter(ExporterParameters params) {
 		super(params);
 	}
 

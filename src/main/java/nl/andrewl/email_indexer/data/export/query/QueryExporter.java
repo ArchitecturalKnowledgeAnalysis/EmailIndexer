@@ -5,6 +5,7 @@ import nl.andrewl.email_indexer.data.EmailEntry;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.TagRepository;
 import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 import nl.andrewl.email_indexer.data.search.EmailIndexSearcher;
 import nl.andrewl.email_indexer.util.Async;
 
@@ -22,9 +23,9 @@ public abstract class QueryExporter implements EmailDatasetExporter {
     /**
      * The parameters to use during the export.
      */
-    protected final QueryExportParams params;
+    protected final ExporterParameters params;
 
-    protected QueryExporter(QueryExportParams params) {
+    protected QueryExporter(ExporterParameters params) {
         this.params = params;
     }
 
@@ -32,7 +33,7 @@ public abstract class QueryExporter implements EmailDatasetExporter {
     public CompletableFuture<Void> export(EmailDataset ds, Path path) {
         return Async.run(() -> {
             List<Long> rootIds = new EmailIndexSearcher().search(ds, params.getQuery(), params.getMaxResultCount());
-            params.setResultCount(rootIds.size());
+            params.withMaxResultCount(rootIds.size());
             beforeExport(ds, path);
             EmailRepository emailRepo = new EmailRepository(ds);
             TagRepository tagRepo = new TagRepository(ds);

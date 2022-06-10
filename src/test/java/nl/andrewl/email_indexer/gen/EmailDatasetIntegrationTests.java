@@ -4,11 +4,11 @@ import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.Tag;
 import nl.andrewl.email_indexer.data.TagRepository;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 import nl.andrewl.email_indexer.data.export.dataset.ZipExporter;
 import nl.andrewl.email_indexer.data.export.query.CsvQueryExporter;
 import nl.andrewl.email_indexer.data.export.query.PdfQueryExporter;
 import nl.andrewl.email_indexer.data.export.query.PlainTextQueryExporter;
-import nl.andrewl.email_indexer.data.export.query.QueryExportParams;
 import nl.andrewl.email_indexer.data.search.EmailIndexSearcher;
 import nl.andrewl.email_indexer.util.DbUtils;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -61,10 +61,10 @@ public class EmailDatasetIntegrationTests {
 	@Test
 	public void testExportsSeparated() {
 		EmailDataset ds = genDataset("__test_export_separated");
-		var params = new QueryExportParams()
+		var params = new ExporterParameters()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
-				.withSeparateEmailThreads(true);
+				.withSeparateMailingThreads(true);
 		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-separated-txt")).join();
 		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-separated-pdf")).join();
 		ds.close().join();
@@ -73,10 +73,10 @@ public class EmailDatasetIntegrationTests {
 	@Test
 	public void testExportsMerged() {
 		EmailDataset ds = genDataset("__test_export_merged");
-		var params = new QueryExportParams()
+		var params = new ExporterParameters()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
-				.withSeparateEmailThreads(false);
+				.withSeparateMailingThreads(false);
 		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-txt.txt")).join();
 		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-pdf.pdf")).join();
 		ds.close().join();
@@ -99,7 +99,7 @@ public class EmailDatasetIntegrationTests {
 	@Test
 	public void testCsvExporter() {
 		EmailDataset ds = genDataset("__test_export_csv");
-		var params = new QueryExportParams()
+		var params = new ExporterParameters()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(1000);
 		new CsvQueryExporter(params).export(ds, TEST_DIR.resolve("__test_export_csv.csv")).join();
