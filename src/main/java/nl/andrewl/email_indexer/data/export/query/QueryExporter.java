@@ -69,9 +69,7 @@ public abstract class QueryExporter implements EmailDatasetExporter {
         int rank = 1;
         for (EmailEntryPreview email : results.emails()) {
             Optional<EmailEntry> entry = emailRepo.findEmailById(email.id());
-            System.out.println(entry.isPresent());
             if (entry.isPresent()) {
-                System.out.println(entry.get());
                 exportEmail(entry.get(), rank++, emailRepo, tagRepo);
             }
         }
