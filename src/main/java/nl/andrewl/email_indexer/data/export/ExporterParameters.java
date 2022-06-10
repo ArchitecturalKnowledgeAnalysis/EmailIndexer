@@ -26,7 +26,7 @@ public class ExporterParameters {
     private EmailDataset dataset = null;
     private List<EmailEntryPreview> emails = null;
     private Path outputPath = null;
-    private SearchFilter searchFilter = null;
+    private List<SearchFilter> searchFilters = null;
     private int maxResultCount = 100;
     private OutputType outputType = OutputType.UNSET;
     private boolean separateMailingThreads = false;
@@ -63,12 +63,12 @@ public class ExporterParameters {
         return outputType;
     }
 
-    public SearchFilter getFilter()  {
-        return searchFilter;
+    public List<SearchFilter> getFilters() {
+        return searchFilters;
     }
 
-    public ExporterParameters withSearchFilter(SearchFilter searchFilter) {
-        this.searchFilter = searchFilter;
+    public ExporterParameters withSearchFilters(List<SearchFilter> searchFilters) {
+        this.searchFilters = searchFilters;
         return this;
     }
 
