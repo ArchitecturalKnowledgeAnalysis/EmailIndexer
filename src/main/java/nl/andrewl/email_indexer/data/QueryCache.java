@@ -21,14 +21,13 @@ public class QueryCache {
 	public static String load(String resourceName) {
 		String sql = CACHE.get(resourceName);
 		if (sql == null) {
-			InputStream is = QueryCache.class.getResourceAsStream(resourceName);
-			if (is == null) throw new RuntimeException("Could not load " + resourceName);
-			try {
+			try (InputStream is = QueryCache.class.getResourceAsStream(resourceName)) {
+				if (is == null) throw new RuntimeException("Could not load " + resourceName);
 				sql = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+				CACHE.put(resourceName, sql);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
 			}
-			CACHE.put(resourceName, sql);
 		}
 		return sql;
 	}

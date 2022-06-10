@@ -5,7 +5,6 @@ import nl.andrewl.email_indexer.gen.transform.BodyReplyRemover;
 import nl.andrewl.mboxparser.Email;
 import nl.andrewl.mboxparser.EmailHandler;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;

@@ -1,7 +1,8 @@
 package nl.andrewl.email_indexer.data;
 
-import net.lingala.zip4j.ZipFile;
-import net.lingala.zip4j.model.ZipParameters;
+import nl.andrewl.email_indexer.data.imports.DirectoryImporter;
+import nl.andrewl.email_indexer.data.imports.EmailDatasetImporter;
+import nl.andrewl.email_indexer.data.imports.ZipImporter;
 import nl.andrewl.email_indexer.util.Async;
 
 import java.io.IOException;
@@ -10,6 +11,7 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -42,7 +44,7 @@ public class EmailDataset {
 
 	public void establishConnection() throws SQLException {
 		if (this.dbConn != null) return;
-		this.dbConn = DriverManager.getConnection(getJdbcUrl(openDir.resolve("database.mv.db")));
+		this.dbConn = DriverManager.getConnection(getJdbcUrl(getDatabaseFile()));
 	}
 
 	public Connection getConnection() {
@@ -59,6 +61,46 @@ public class EmailDataset {
 
 	public Path getDatabaseFile() {
 		return this.openDir.resolve("database.mv.db");
+	}
+
+	public Path getMetadataFile() {
+		return this.openDir.resolve("metadata.properties");
+	}
+
+	/**
+	 * Gets this dataset's metadata properties. If no metadata file exists yet,
+	 * it will be created, and we assume the dataset was at version 1, since
+	 * metadata was introduced in version 2.
+	 * @return The properties which were loaded.
+	 * @throws IOException If an error occurs while loading or creating the file.
+	 */
+	public Properties getMetadata() throws IOException {
+		Properties props = new Properties();
+		if (Files.notExists(getMetadataFile())) {
+			props.setProperty("version", "1");
+			try (var writer = Files.newBufferedWriter(getMetadataFile())) {
+				props.store(writer, null);
+			}
+		} else {
+			try (var reader = Files.newBufferedReader(getMetadataFile())) {
+				props.load(reader);
+			}
+		}
+		return props;
+	}
+
+	/**
+	 * Gets the integer version number of this dataset.
+	 * @return The version number.
+	 * @throws IOException If an error occurs.
+	 */
+	public int getVersion() throws IOException {
+		var props = getMetadata();
+		try {
+			return Integer.parseInt(props.getProperty("version", "1"));
+		} catch (NumberFormatException e) {
+			throw new IOException(e);
+		}
 	}
 
 	/**
@@ -83,52 +125,20 @@ public class EmailDataset {
 	 * @return A future that completes when the dataset is opened.
 	 */
 	public static CompletableFuture<EmailDataset> open(Path dsFile) {
-		return Async.supply(() -> {
-			if (Files.isDirectory(dsFile)) {
-				if (!Files.exists(dsFile.resolve("index")) || !Files.exists(dsFile.resolve("database.mv.db"))) {
-					throw new IOException("Invalid dataset directory. A dataset must contain an \"index\" directory, and a \"database.mv.db\" file.");
-				}
-				return new EmailDataset(dsFile);
-			} else if (dsFile.getFileName().toString().toLowerCase().endsWith(".zip")) {
-				String filename = dsFile.getFileName().toString();
-				String dirName = filename.substring(0, filename.lastIndexOf('.'));
-				// Add '_' prefix until we have a new directory that doesn't exist yet.
-				Path openDir = dsFile.resolveSibling(dirName);
-				while (Files.exists(openDir)) {
-					dirName = "_" + dirName;
-					openDir = dsFile.resolveSibling(dirName);
-				}
-				Files.createDirectory(openDir);
-				var zip = new ZipFile(dsFile.toFile());
-				zip.extractAll(openDir.toAbsolutePath().toString());
-				zip.close();
-				return new EmailDataset(openDir);
-			} else {
-				throw new IOException("Invalid file.");
-			}
-		});
+		EmailDatasetImporter importer;
+		if (dsFile.getFileName().toString().toLowerCase().endsWith(".zip")) {
+			importer = new ZipImporter();
+		} else {
+			importer = new DirectoryImporter();
+		}
+		return importer.importFrom(dsFile);
 	}
 
 	/**
-	 * Zips a dataset directory into a ZIP file for storage. The directory
-	 * should contain an "index" directory containing Apache Lucene index files,
-	 * and a "database.mv.db" file that holds the relational database.
-	 * @param dir The directory to use. It will be deleted by this method.
-	 * @param file The file to place the ZIP file at. If it already exists, it
-	 *             will be overwritten.
-	 * @return A future that completes when the dataset is saved.
+	 * Derives a JDBC connection URL for an H2 database file at a given path.
+	 * @param dbFile The database file.
+	 * @return A string that can be used to obtain a connection to the database.
 	 */
-	public static CompletableFuture<Void> buildZip(Path dir, Path file) {
-		return Async.run(() -> {
-			ZipParameters params = new ZipParameters();
-			params.setOverrideExistingFilesInZip(true);
-			try (var zip = new ZipFile(file.toFile())) {
-				zip.addFolder(dir.resolve("index").toFile(), params);
-				zip.addFile(dir.resolve("database.mv.db").toFile(), params);
-			}
-		});
-	}
-
 	public static String getJdbcUrl(Path dbFile) {
 		String dbFileName = dbFile.toAbsolutePath().toString();
 		if (dbFileName.endsWith(".mv.db")) {

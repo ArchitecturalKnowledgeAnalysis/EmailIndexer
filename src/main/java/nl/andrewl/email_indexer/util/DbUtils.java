@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public final class DbUtils {
 	private DbUtils() {}
@@ -66,6 +67,20 @@ public final class DbUtils {
 		T map(ResultSet rs) throws SQLException;
 	}
 
+	@FunctionalInterface
+	public interface Transaction {
+		void doTransaction(Connection c) throws SQLException;
+	}
+
+	/**
+	 * Fetches a list of results from a database.
+	 * @param c The connection to use.
+	 * @param query The query to use.
+	 * @param mapper A mapping function to apply to each row.
+	 * @param args Arguments to supply to the query.
+	 * @return A list of items.
+	 * @param <T> The type of items.
+	 */
 	public static <T> List<T> fetch(Connection c, String query, ResultSetMapper<T> mapper, Object... args) {
 		List<T> items = new ArrayList<>();
 		try (var stmt = c.prepareStatement(query)) {
@@ -80,5 +95,43 @@ public final class DbUtils {
 			e.printStackTrace();
 		}
 		return items;
+	}
+
+	/**
+	 * Fetches a single result from a database.
+	 * @param c The connection to use.
+	 * @param query The query to use.
+	 * @param mapper A mapping function to apply to each row.
+	 * @param args Arguments to supply to the query.
+	 * @return An optional that contains the item, if it was found.
+	 * @param <T> The type of the result.
+	 */
+	public static <T>Optional<T> fetchOne(Connection c, String query, ResultSetMapper<T> mapper, Object... args) {
+		try (var stmt = c.prepareStatement(query)) {
+			int idx = 1;
+			for (var arg : args) stmt.setObject(idx++, arg);
+			var rs = stmt.executeQuery();
+			if (rs.next()) return Optional.of(mapper.map(rs));
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return Optional.empty();
+	}
+
+	public static void doTransaction(Connection c, Transaction tx) {
+		try {
+			c.setAutoCommit(false);
+			try {
+				tx.doTransaction(c);
+				c.commit();
+			} catch (SQLException e) {
+				e.printStackTrace();
+				c.rollback();
+			}
+			c.setAutoCommit(true);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
 	}
 }
