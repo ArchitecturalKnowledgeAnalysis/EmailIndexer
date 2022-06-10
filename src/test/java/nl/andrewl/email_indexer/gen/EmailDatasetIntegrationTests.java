@@ -89,7 +89,7 @@ public class EmailDatasetIntegrationTests {
 	public void testExportsFilterMerged() {
 		EmailDataset ds = genDataset("__test_export_filter_merged");
 		List<SearchFilter> filters = new ArrayList<SearchFilter>();
-		filters.add(new HiddenFilter(true));
+		filters.add(new HiddenFilter(false));
 		filters.add(new RootFilter(false));
 		var params = new ExporterParameters()
 				.withMaxResultCount(10)
@@ -104,7 +104,7 @@ public class EmailDatasetIntegrationTests {
 	public void testExportsFilterSeparated() {
 		EmailDataset ds = genDataset("__test_export_filter_separated");
 		List<SearchFilter> filters = new ArrayList<SearchFilter>();
-		filters.add(new HiddenFilter(true));
+		filters.add(new HiddenFilter(false));
 		filters.add(new RootFilter(false));
 		var params = new ExporterParameters()
 				.withMaxResultCount(10)

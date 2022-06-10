@@ -8,6 +8,7 @@ import nl.andrewl.email_indexer.data.TagRepository;
 import nl.andrewl.email_indexer.data.export.EmailDatasetExporter;
 import nl.andrewl.email_indexer.data.export.ExporterParameters;
 import nl.andrewl.email_indexer.data.search.EmailIndexSearcher;
+import nl.andrewl.email_indexer.data.search.EmailSearchResult;
 import nl.andrewl.email_indexer.data.search.EmailSearcher;
 import nl.andrewl.email_indexer.util.Async;
 
@@ -63,24 +64,17 @@ public abstract class QueryExporter implements EmailDatasetExporter {
         beforeExport(ds, path);
         EmailRepository emailRepo = new EmailRepository(ds);
         TagRepository tagRepo = new TagRepository(ds);
-        new EmailSearcher(ds).findAll(1, this.params.getMaxResultCount(), this.params.getFilters())
-                .handle((results, throwable) -> {
-                    if (throwable != null) {
-                        throw new RuntimeException(throwable);
-                    }
-                    int rank = 0;
-                    for (EmailEntryPreview email : results.emails()) {
-                        Optional<EmailEntry> entry = emailRepo.findEmailById(email.id());
-                        if (entry.isPresent()) {
-                            try {
-                                exportEmail(entry.get(), rank++, emailRepo, tagRepo);
-                            } catch (IOException ex) {
-                                throw new RuntimeException(ex);
-                            }
-                        }
-                    }
-                    return null;
-                }).join();
+        EmailSearchResult results = new EmailSearcher(ds)
+                .findAll(1, this.params.getMaxResultCount(), this.params.getFilters()).join();
+        int rank = 1;
+        for (EmailEntryPreview email : results.emails()) {
+            Optional<EmailEntry> entry = emailRepo.findEmailById(email.id());
+            System.out.println(entry.isPresent());
+            if (entry.isPresent()) {
+                System.out.println(entry.get());
+                exportEmail(entry.get(), rank++, emailRepo, tagRepo);
+            }
+        }
         afterExport();
     }
 
