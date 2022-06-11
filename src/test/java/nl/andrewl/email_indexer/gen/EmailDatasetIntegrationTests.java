@@ -4,12 +4,15 @@ import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.Tag;
 import nl.andrewl.email_indexer.data.TagRepository;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 import nl.andrewl.email_indexer.data.export.dataset.ZipExporter;
 import nl.andrewl.email_indexer.data.export.query.CsvQueryExporter;
 import nl.andrewl.email_indexer.data.export.query.PdfQueryExporter;
 import nl.andrewl.email_indexer.data.export.query.PlainTextQueryExporter;
-import nl.andrewl.email_indexer.data.export.query.QueryExportParams;
 import nl.andrewl.email_indexer.data.search.EmailIndexSearcher;
+import nl.andrewl.email_indexer.data.search.SearchFilter;
+import nl.andrewl.email_indexer.data.search.filter.HiddenFilter;
+import nl.andrewl.email_indexer.data.search.filter.RootFilter;
 import nl.andrewl.email_indexer.util.DbUtils;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.h2.store.fs.FileUtils;
@@ -61,10 +64,10 @@ public class EmailDatasetIntegrationTests {
 	@Test
 	public void testExportsSeparated() {
 		EmailDataset ds = genDataset("__test_export_separated");
-		var params = new QueryExportParams()
+		var params = new ExporterParameters()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
-				.withSeparateEmailThreads(true);
+				.withSeparateMailingThreads(true);
 		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-separated-txt")).join();
 		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-separated-pdf")).join();
 		ds.close().join();
@@ -73,12 +76,42 @@ public class EmailDatasetIntegrationTests {
 	@Test
 	public void testExportsMerged() {
 		EmailDataset ds = genDataset("__test_export_merged");
-		var params = new QueryExportParams()
+		var params = new ExporterParameters()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
-				.withSeparateEmailThreads(false);
+				.withSeparateMailingThreads(false);
 		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-txt.txt")).join();
 		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-pdf.pdf")).join();
+		ds.close().join();
+	}
+
+	@Test
+	public void testExportsFilterMerged() {
+		EmailDataset ds = genDataset("__test_export_filter_merged");
+		List<SearchFilter> filters = new ArrayList<SearchFilter>();
+		filters.add(new HiddenFilter(false));
+		filters.add(new RootFilter(false));
+		var params = new ExporterParameters()
+				.withMaxResultCount(10)
+				.withSeparateMailingThreads(false)
+				.withSearchFilters(filters);
+		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-filtered-merged-txt.txt")).join();
+		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-filtered-merged-pdf.pdf")).join();
+		ds.close().join();
+	}
+
+	@Test
+	public void testExportsFilterSeparated() {
+		EmailDataset ds = genDataset("__test_export_filter_separated");
+		List<SearchFilter> filters = new ArrayList<SearchFilter>();
+		filters.add(new HiddenFilter(false));
+		filters.add(new RootFilter(false));
+		var params = new ExporterParameters()
+				.withMaxResultCount(10)
+				.withSeparateMailingThreads(true)
+				.withSearchFilters(filters);
+		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-filtered-separated-txt")).join();
+		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-filtered-separated-pdf")).join();
 		ds.close().join();
 	}
 
@@ -99,7 +132,7 @@ public class EmailDatasetIntegrationTests {
 	@Test
 	public void testCsvExporter() {
 		EmailDataset ds = genDataset("__test_export_csv");
-		var params = new QueryExportParams()
+		var params = new ExporterParameters()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(1000);
 		new CsvQueryExporter(params).export(ds, TEST_DIR.resolve("__test_export_csv.csv")).join();
@@ -109,6 +142,7 @@ public class EmailDatasetIntegrationTests {
 	 * Generates a dataset for testing. Includes a large set of emails from
 	 * the Hadoop project, and a pseudorandom selection of tags applied to
 	 * them.
+	 * 
 	 * @param name The name of the dataset directory.
 	 * @return The dataset.
 	 */
@@ -140,8 +174,7 @@ public class EmailDatasetIntegrationTests {
 			for (int j = 0; j < rand.nextInt(0, tags.size()); j++) {
 				tagRepo.addTag(
 						emailIds.get(rand.nextInt(0, emailIds.size())),
-						tags.get(rand.nextInt(0, tags.size())).id()
-				);
+						tags.get(rand.nextInt(0, tags.size())).id());
 			}
 		}
 

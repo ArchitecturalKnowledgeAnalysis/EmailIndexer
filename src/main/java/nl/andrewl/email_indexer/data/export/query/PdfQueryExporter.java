@@ -4,6 +4,7 @@ import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfWriter;
 import nl.andrewl.email_indexer.data.*;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -32,20 +33,20 @@ public final class PdfQueryExporter extends QueryExporter {
     private EmailRepository emailRepo;
     private TagRepository tagRepo;
 
-    public PdfQueryExporter(QueryExportParams params) {
+    public PdfQueryExporter(ExporterParameters params) {
         super(params);
     }
 
     @Override
     protected void beforeExport(EmailDataset ds, Path path) throws IOException {
         outputDir = path;
-        if (this.params.isSeparateEmailThreads() && !Files.exists(outputDir)) {
+        if (this.params.mailingThreadsAreSeparate() && !Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
         emailRepo = new EmailRepository(ds);
         tagRepo = new TagRepository(ds);
         try {
-            mainDocument = this.params.isSeparateEmailThreads()
+            mainDocument = this.params.mailingThreadsAreSeparate()
                     ? makeMetaFile(ds, path.resolve(MAIN_OUTPUT_FILE))
                     : makeMetaFile(ds, path);
         } catch (DocumentException e) {
@@ -57,7 +58,7 @@ public final class PdfQueryExporter extends QueryExporter {
     protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
             throws IOException {
         try {
-            if (params.isSeparateEmailThreads()) {
+            if (params.mailingThreadsAreSeparate()) {
                 writeThreadInSeparateDocument(email, Integer.toString(rank));
             } else {
                 writeThreadInDocument(mainDocument, email, Integer.toString(rank));
@@ -85,7 +86,7 @@ public final class PdfQueryExporter extends QueryExporter {
         String tags = new TagRepository(ds).findAll().stream().map(Tag::name).collect(Collectors.joining(", "));
         addText(tags, document, REGULAR_TEXT);
         addText("Total emails:", document, SUBHEADER_TEXT);
-        addText(params.getResultCount() + "\n\n", document, REGULAR_TEXT);
+        addText(params.getMaxResultCount() + "\n\n", document, REGULAR_TEXT);
         document.newPage();
         return document;
     }
