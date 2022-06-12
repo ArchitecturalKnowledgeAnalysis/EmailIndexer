@@ -105,7 +105,7 @@ public final class PdfExporter implements TypeExporter {
         addText("Date:", document, SUBHEADER_TEXT);
         addText(email.date() + "\n\n", document, REGULAR_TEXT);
         addText("Tags:", document, SUBHEADER_TEXT);
-        String tags = tagRepo.findAll().stream().map(Tag::name).collect(Collectors.joining(", "));
+        String tags = tagRepo.getTags(email.id()).stream().map(Tag::name).collect(Collectors.joining(", "));
         addText(tags + "\n\n", document, REGULAR_TEXT);
         addText("Reply Count:", document, SUBHEADER_TEXT);
         List<EmailEntryPreview> replies = emailRepo.findAllReplies(email.id());
