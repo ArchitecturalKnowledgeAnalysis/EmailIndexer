@@ -38,7 +38,7 @@ public abstract class SampleExporter implements EmailDatasetExporter {
         CompletableFuture<Void> cf = new CompletableFuture<>();
         Async.run(() -> {
             try {
-                doExport(ds, path);
+                exportSample(ds, path);
                 cf.complete(null);
             } catch (Exception ex) {
                 cf.completeExceptionally(ex);
@@ -54,5 +54,5 @@ public abstract class SampleExporter implements EmailDatasetExporter {
      * @param ds   The dataset to export.
      * @param path The path to export to.
      */
-    protected abstract void doExport(EmailDataset ds, Path path) throws Exception;
+    protected abstract void exportSample(EmailDataset ds, Path path) throws Exception;
 }

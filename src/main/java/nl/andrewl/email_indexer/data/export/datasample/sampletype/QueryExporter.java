@@ -21,7 +21,7 @@ public class QueryExporter extends SampleExporter {
         super(typeExporter, params);
     }
 
-    protected void doExport(EmailDataset ds, Path path) throws Exception {
+    protected void exportSample(EmailDataset ds, Path path) throws Exception {
         if (this.params.getQuery() == null || this.params.getQuery().isBlank()) {
             throw new IllegalArgumentException("Query parameter cannot be blank or null.");
         }

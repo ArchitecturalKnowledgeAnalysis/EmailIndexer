@@ -22,7 +22,7 @@ public class FilterExporter extends SampleExporter {
         super(typeExporter, params);
     }
 
-    protected void doExport(EmailDataset ds, Path path) throws Exception {
+    protected void exportSample(EmailDataset ds, Path path) throws Exception {
         if (this.params.getFilters() == null) {
             throw new IllegalArgumentException("Filter parameter cannot be null.");
         }
