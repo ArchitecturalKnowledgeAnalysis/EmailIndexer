@@ -10,7 +10,7 @@ import nl.andrewl.email_indexer.data.export.datasample.datatype.TypeExporter;
 import nl.andrewl.email_indexer.util.Async;
 
 /**
- * Parent calss of concrete SampleExporter implementations, that abstracts away
+ * Parent class of concrete SampleExporter implementations, that abstracts away
  * common asynchronous export behaviour.
  */
 public abstract class SampleExporter implements EmailDatasetExporter {
