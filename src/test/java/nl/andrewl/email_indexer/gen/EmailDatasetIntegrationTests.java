@@ -102,7 +102,7 @@ public class EmailDatasetIntegrationTests {
 		filters.add(new RootFilter(false));
 		filters.add(genTagFilter(ds));
 		var params = new ExporterParameters()
-				.withMaxResultCount(50)
+				.withMaxResultCount(135)
 				.withSeparateMailingThreads(false)
 				.withSearchFilters(filters);
 		new FilterExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("__test_filtered_merged_txt.txt"))
