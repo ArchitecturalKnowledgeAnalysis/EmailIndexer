@@ -32,6 +32,7 @@ import nl.andrewl.email_indexer.data.search.EmailIndexSearcher;
 import nl.andrewl.email_indexer.data.search.SearchFilter;
 import nl.andrewl.email_indexer.data.search.filter.HiddenFilter;
 import nl.andrewl.email_indexer.data.search.filter.RootFilter;
+import nl.andrewl.email_indexer.data.search.filter.TagFilter;
 import nl.andrewl.email_indexer.util.DbUtils;
 
 /**
@@ -67,26 +68,29 @@ public class EmailDatasetIntegrationTests {
 	}
 
 	@Test
-	public void testExportsSeparated() {
+	public void testExportsQuerySeparated() {
 		EmailDataset ds = genDataset("__test_export_separated");
 		var params = new ExporterParameters()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
 				.withSeparateMailingThreads(true);
-		new QueryExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("export-separated-txt")).join();
-		new QueryExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("export-separated-pdf")).join();
+		new QueryExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("__test_query_export_separated_txt"))
+				.join();
+		new QueryExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("__test_query_export_separated_pdf"))
+				.join();
 		ds.close().join();
 	}
 
 	@Test
-	public void testExportsMerged() {
+	public void testExportsQueryMerged() {
 		EmailDataset ds = genDataset("__test_export_merged");
 		var params = new ExporterParameters()
 				.withQuery("t* r* s* e*")
-				.withMaxResultCount(10)
+				.withMaxResultCount(50)
 				.withSeparateMailingThreads(false);
-		new QueryExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("export-merged-txt.txt")).join();
-		new QueryExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("export-merged-pdf.pdf")).join();
+		new QueryExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("__test_query_export_txt.txt")).join();
+		new QueryExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("__test_query_export_pdf.pdf")).join();
+		new QueryExporter(new CsvExporter(), params).export(ds, TEST_DIR.resolve("__test_query_export_csv.csv")).join();
 		ds.close().join();
 	}
 
@@ -96,13 +100,16 @@ public class EmailDatasetIntegrationTests {
 		List<SearchFilter> filters = new ArrayList<SearchFilter>();
 		filters.add(new HiddenFilter(false));
 		filters.add(new RootFilter(false));
+		filters.add(genTagFilter(ds));
 		var params = new ExporterParameters()
-				.withMaxResultCount(10)
+				.withMaxResultCount(50)
 				.withSeparateMailingThreads(false)
 				.withSearchFilters(filters);
-		new FilterExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("export-filtered-merged-txt.txt"))
+		new FilterExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("__test_filtered_merged_txt.txt"))
 				.join();
-		new FilterExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("export-filtered-merged-pdf.pdf"))
+		new FilterExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("__test_filtered_merged_pdf.pdf"))
+				.join();
+		new FilterExporter(new CsvExporter(), params).export(ds, TEST_DIR.resolve("__test_filter_export_csv.csv"))
 				.join();
 		ds.close().join();
 	}
@@ -113,13 +120,16 @@ public class EmailDatasetIntegrationTests {
 		List<SearchFilter> filters = new ArrayList<SearchFilter>();
 		filters.add(new HiddenFilter(false));
 		filters.add(new RootFilter(false));
+		filters.add(genTagFilter(ds));
 		var params = new ExporterParameters()
 				.withMaxResultCount(10)
 				.withSeparateMailingThreads(true)
 				.withSearchFilters(filters);
-		new FilterExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("export-filtered-separated-txt"))
+		new FilterExporter(new TxtExporter(), params)
+				.export(ds, TEST_DIR.resolve("__test_filtered_export_separated_txt"))
 				.join();
-		new FilterExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("export-filtered-separated-pdf"))
+		new FilterExporter(new PdfExporter(), params)
+				.export(ds, TEST_DIR.resolve("__test_filtered_export_separated_pdf"))
 				.join();
 		ds.close().join();
 	}
@@ -136,15 +146,6 @@ public class EmailDatasetIntegrationTests {
 		ds = EmailDataset.open(zipFile).join();
 		assertEquals(emailCount, new EmailRepository(ds).countEmails());
 		ds.close().join();
-	}
-
-	@Test
-	public void testCsvExporter() {
-		EmailDataset ds = genDataset("__test_export_csv");
-		var params = new ExporterParameters()
-				.withQuery("t* r* s* e*")
-				.withMaxResultCount(1000);
-		new QueryExporter(new CsvExporter(), params).export(ds, TEST_DIR.resolve("__test_export_csv.csv")).join();
 	}
 
 	/**
@@ -188,5 +189,19 @@ public class EmailDatasetIntegrationTests {
 		}
 
 		return ds;
+	}
+
+	/**
+	 * Generates a TagFilter using the provided dataset.
+	 * 
+	 * @param ds used data set.
+	 * @return tag filter
+	 */
+	private TagFilter genTagFilter(EmailDataset ds) {
+		TagRepository repo = new TagRepository(ds);
+		ArrayList<Integer> filteredTags = new ArrayList<>();
+		filteredTags.add(repo.getTagByName("A").get().id());
+		filteredTags.add(repo.getTagByName("B").get().id());
+		return new TagFilter(filteredTags, TagFilter.Type.EXCLUDE_ANY);
 	}
 }
