@@ -1,4 +1,4 @@
-package nl.andrewl.email_indexer.data.export.query;
+package nl.andrewl.email_indexer.data.export.datasample.datatype;
 
 import nl.andrewl.email_indexer.data.*;
 import nl.andrewl.email_indexer.data.export.ExporterParameters;
@@ -14,7 +14,7 @@ import java.nio.file.Path;
  * Query exporter that exports the results of email threads to a CSV file
  * that provides a quick overview of the information in each thread.
  */
-public class CsvQueryExporter extends QueryExporter {
+public class CsvExporter implements TypeExporter {
 	private static final String[] HEADERS = {
 			"RANK",
 			"ID",
@@ -28,12 +28,7 @@ public class CsvQueryExporter extends QueryExporter {
 
 	private CSVPrinter printer;
 
-	public CsvQueryExporter(ExporterParameters params) {
-		super(params);
-	}
-
-	@Override
-	protected void beforeExport(EmailDataset ds, Path path) throws IOException {
+	public void beforeExport(EmailDataset ds, Path path, ExporterParameters params) throws IOException {
 		PrintWriter printWriter = new PrintWriter(path.toFile());
 		CSVFormat format = CSVFormat.Builder.create(CSVFormat.RFC4180)
 				.setHeader(HEADERS)
@@ -41,8 +36,8 @@ public class CsvQueryExporter extends QueryExporter {
 		printer = new CSVPrinter(printWriter, format);
 	}
 
-	@Override
-	protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo) throws IOException {
+	public void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
+			throws IOException {
 		printer.printRecord(
 				rank,
 				email.id(),
@@ -51,12 +46,10 @@ public class CsvQueryExporter extends QueryExporter {
 				email.date(),
 				tagRepo.getTags(email.id()),
 				tagRepo.getAllChildTags(email.id()),
-				emailRepo.countRepliesRecursive(email.id())
-		);
+				emailRepo.countRepliesRecursive(email.id()));
 	}
 
-	@Override
-	protected void afterExport() throws IOException {
+	public void afterExport() throws IOException {
 		printer.close();
 	}
 }

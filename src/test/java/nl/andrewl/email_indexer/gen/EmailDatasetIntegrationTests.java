@@ -1,23 +1,8 @@
 package nl.andrewl.email_indexer.gen;
 
-import nl.andrewl.email_indexer.data.EmailDataset;
-import nl.andrewl.email_indexer.data.EmailRepository;
-import nl.andrewl.email_indexer.data.Tag;
-import nl.andrewl.email_indexer.data.TagRepository;
-import nl.andrewl.email_indexer.data.export.ExporterParameters;
-import nl.andrewl.email_indexer.data.export.dataset.ZipExporter;
-import nl.andrewl.email_indexer.data.export.query.CsvQueryExporter;
-import nl.andrewl.email_indexer.data.export.query.PdfQueryExporter;
-import nl.andrewl.email_indexer.data.export.query.PlainTextQueryExporter;
-import nl.andrewl.email_indexer.data.search.EmailIndexSearcher;
-import nl.andrewl.email_indexer.data.search.SearchFilter;
-import nl.andrewl.email_indexer.data.search.filter.HiddenFilter;
-import nl.andrewl.email_indexer.data.search.filter.RootFilter;
-import nl.andrewl.email_indexer.util.DbUtils;
-import org.apache.lucene.queryparser.classic.ParseException;
-import org.h2.store.fs.FileUtils;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -27,7 +12,27 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.h2.store.fs.FileUtils;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import nl.andrewl.email_indexer.data.EmailDataset;
+import nl.andrewl.email_indexer.data.EmailRepository;
+import nl.andrewl.email_indexer.data.Tag;
+import nl.andrewl.email_indexer.data.TagRepository;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
+import nl.andrewl.email_indexer.data.export.datasample.datatype.CsvExporter;
+import nl.andrewl.email_indexer.data.export.datasample.datatype.PdfExporter;
+import nl.andrewl.email_indexer.data.export.datasample.datatype.TxtExporter;
+import nl.andrewl.email_indexer.data.export.datasample.sampletype.FilterExporter;
+import nl.andrewl.email_indexer.data.export.datasample.sampletype.QueryExporter;
+import nl.andrewl.email_indexer.data.export.dataset.ZipExporter;
+import nl.andrewl.email_indexer.data.search.EmailIndexSearcher;
+import nl.andrewl.email_indexer.data.search.SearchFilter;
+import nl.andrewl.email_indexer.data.search.filter.HiddenFilter;
+import nl.andrewl.email_indexer.data.search.filter.RootFilter;
+import nl.andrewl.email_indexer.util.DbUtils;
 
 /**
  * A test which runs through some common dataset workflows.
@@ -68,8 +73,8 @@ public class EmailDatasetIntegrationTests {
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
 				.withSeparateMailingThreads(true);
-		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-separated-txt")).join();
-		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-separated-pdf")).join();
+		new QueryExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("export-separated-txt")).join();
+		new QueryExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("export-separated-pdf")).join();
 		ds.close().join();
 	}
 
@@ -80,8 +85,8 @@ public class EmailDatasetIntegrationTests {
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(10)
 				.withSeparateMailingThreads(false);
-		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-txt.txt")).join();
-		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-merged-pdf.pdf")).join();
+		new QueryExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("export-merged-txt.txt")).join();
+		new QueryExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("export-merged-pdf.pdf")).join();
 		ds.close().join();
 	}
 
@@ -95,8 +100,10 @@ public class EmailDatasetIntegrationTests {
 				.withMaxResultCount(10)
 				.withSeparateMailingThreads(false)
 				.withSearchFilters(filters);
-		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-filtered-merged-txt.txt")).join();
-		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-filtered-merged-pdf.pdf")).join();
+		new FilterExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("export-filtered-merged-txt.txt"))
+				.join();
+		new FilterExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("export-filtered-merged-pdf.pdf"))
+				.join();
 		ds.close().join();
 	}
 
@@ -110,8 +117,10 @@ public class EmailDatasetIntegrationTests {
 				.withMaxResultCount(10)
 				.withSeparateMailingThreads(true)
 				.withSearchFilters(filters);
-		new PlainTextQueryExporter(params).export(ds, TEST_DIR.resolve("export-filtered-separated-txt")).join();
-		new PdfQueryExporter(params).export(ds, TEST_DIR.resolve("export-filtered-separated-pdf")).join();
+		new FilterExporter(new TxtExporter(), params).export(ds, TEST_DIR.resolve("export-filtered-separated-txt"))
+				.join();
+		new FilterExporter(new PdfExporter(), params).export(ds, TEST_DIR.resolve("export-filtered-separated-pdf"))
+				.join();
 		ds.close().join();
 	}
 
@@ -135,7 +144,7 @@ public class EmailDatasetIntegrationTests {
 		var params = new ExporterParameters()
 				.withQuery("t* r* s* e*")
 				.withMaxResultCount(1000);
-		new CsvQueryExporter(params).export(ds, TEST_DIR.resolve("__test_export_csv.csv")).join();
+		new QueryExporter(new CsvExporter(), params).export(ds, TEST_DIR.resolve("__test_export_csv.csv")).join();
 	}
 
 	/**

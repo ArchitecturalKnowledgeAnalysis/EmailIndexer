@@ -1,4 +1,4 @@
-package nl.andrewl.email_indexer.data.export.query;
+package nl.andrewl.email_indexer.data.export.datasample.datatype;
 
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.BaseFont;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * Writes all information of a mailing thread into a single PDF, or multiple
  * PDFs in a directory.
  */
-public final class PdfQueryExporter extends QueryExporter {
+public final class PdfExporter implements TypeExporter {
     public static final String MAIN_OUTPUT_FILE = "output.pdf";
 
     public static Font HEADER_TEXT = FontFactory.getFont(FontFactory.COURIER, FontFactory.defaultEncoding,
@@ -33,12 +33,10 @@ public final class PdfQueryExporter extends QueryExporter {
     private EmailRepository emailRepo;
     private TagRepository tagRepo;
 
-    public PdfQueryExporter(ExporterParameters params) {
-        super(params);
-    }
+    private ExporterParameters params;
 
-    @Override
-    protected void beforeExport(EmailDataset ds, Path path) throws IOException {
+    public void beforeExport(EmailDataset ds, Path path, ExporterParameters params) throws IOException {
+        this.params = params;
         outputDir = path;
         if (this.params.mailingThreadsAreSeparate() && !Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
@@ -54,8 +52,7 @@ public final class PdfQueryExporter extends QueryExporter {
         }
     }
 
-    @Override
-    protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
+    public void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
             throws IOException {
         try {
             if (params.mailingThreadsAreSeparate()) {
@@ -68,8 +65,7 @@ public final class PdfQueryExporter extends QueryExporter {
         }
     }
 
-    @Override
-    protected void afterExport() {
+    public void afterExport() {
         mainDocument.close();
     }
 
