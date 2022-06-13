@@ -28,6 +28,7 @@ public class CsvExporter implements TypeExporter {
 
 	private CSVPrinter printer;
 
+	@Override
 	public void beforeExport(EmailDataset ds, Path path, ExporterParameters params) throws IOException {
 		PrintWriter printWriter = new PrintWriter(path.toFile());
 		CSVFormat format = CSVFormat.Builder.create(CSVFormat.RFC4180)
@@ -36,8 +37,8 @@ public class CsvExporter implements TypeExporter {
 		printer = new CSVPrinter(printWriter, format);
 	}
 
-	public void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
-			throws IOException {
+	@Override
+	public void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo) throws IOException {
 		printer.printRecord(
 				rank,
 				email.id(),
@@ -49,6 +50,7 @@ public class CsvExporter implements TypeExporter {
 				emailRepo.countRepliesRecursive(email.id()));
 	}
 
+	@Override
 	public void afterExport() throws IOException {
 		printer.close();
 	}

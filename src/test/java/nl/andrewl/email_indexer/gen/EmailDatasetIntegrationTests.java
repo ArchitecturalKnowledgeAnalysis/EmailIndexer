@@ -97,7 +97,7 @@ public class EmailDatasetIntegrationTests {
 	@Test
 	public void testExportsFilterMerged() {
 		EmailDataset ds = genDataset("__test_export_filter_merged");
-		List<SearchFilter> filters = new ArrayList<SearchFilter>();
+		List<SearchFilter> filters = new ArrayList<>();
 		filters.add(new HiddenFilter(false));
 		filters.add(new RootFilter(false));
 		filters.add(genTagFilter(ds));
@@ -117,7 +117,7 @@ public class EmailDatasetIntegrationTests {
 	@Test
 	public void testExportsFilterSeparated() {
 		EmailDataset ds = genDataset("__test_export_filter_separated");
-		List<SearchFilter> filters = new ArrayList<SearchFilter>();
+		List<SearchFilter> filters = new ArrayList<>();
 		filters.add(new HiddenFilter(false));
 		filters.add(new RootFilter(false));
 		filters.add(genTagFilter(ds));
@@ -200,8 +200,8 @@ public class EmailDatasetIntegrationTests {
 	private TagFilter genTagFilter(EmailDataset ds) {
 		TagRepository repo = new TagRepository(ds);
 		ArrayList<Integer> filteredTags = new ArrayList<>();
-		filteredTags.add(repo.getTagByName("A").get().id());
-		filteredTags.add(repo.getTagByName("B").get().id());
+		filteredTags.add(repo.getTagByName("A").orElseThrow().id());
+		filteredTags.add(repo.getTagByName("B").orElseThrow().id());
 		return new TagFilter(filteredTags, TagFilter.Type.EXCLUDE_ANY);
 	}
 }
