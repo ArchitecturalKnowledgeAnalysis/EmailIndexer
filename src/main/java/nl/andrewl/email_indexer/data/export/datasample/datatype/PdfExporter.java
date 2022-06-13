@@ -1,9 +1,10 @@
-package nl.andrewl.email_indexer.data.export.query;
+package nl.andrewl.email_indexer.data.export.datasample.datatype;
 
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfWriter;
 import nl.andrewl.email_indexer.data.*;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
  * Writes all information of a mailing thread into a single PDF, or multiple
  * PDFs in a directory.
  */
-public final class PdfQueryExporter extends QueryExporter {
+public final class PdfExporter implements TypeExporter {
     public static final String MAIN_OUTPUT_FILE = "output.pdf";
 
     public static Font HEADER_TEXT = FontFactory.getFont(FontFactory.COURIER, FontFactory.defaultEncoding,
@@ -32,20 +33,18 @@ public final class PdfQueryExporter extends QueryExporter {
     private EmailRepository emailRepo;
     private TagRepository tagRepo;
 
-    public PdfQueryExporter(QueryExportParams params) {
-        super(params);
-    }
+    private ExporterParameters params;
 
-    @Override
-    protected void beforeExport(EmailDataset ds, Path path) throws IOException {
+    public void beforeExport(EmailDataset ds, Path path, ExporterParameters params) throws IOException {
+        this.params = params;
         outputDir = path;
-        if (this.params.isSeparateEmailThreads() && !Files.exists(outputDir)) {
+        if (this.params.mailingThreadsAreSeparate() && !Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
         emailRepo = new EmailRepository(ds);
         tagRepo = new TagRepository(ds);
         try {
-            mainDocument = this.params.isSeparateEmailThreads()
+            mainDocument = this.params.mailingThreadsAreSeparate()
                     ? makeMetaFile(ds, path.resolve(MAIN_OUTPUT_FILE))
                     : makeMetaFile(ds, path);
         } catch (DocumentException e) {
@@ -53,11 +52,10 @@ public final class PdfQueryExporter extends QueryExporter {
         }
     }
 
-    @Override
-    protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
+    public void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
             throws IOException {
         try {
-            if (params.isSeparateEmailThreads()) {
+            if (params.mailingThreadsAreSeparate()) {
                 writeThreadInSeparateDocument(email, Integer.toString(rank));
             } else {
                 writeThreadInDocument(mainDocument, email, Integer.toString(rank));
@@ -67,8 +65,7 @@ public final class PdfQueryExporter extends QueryExporter {
         }
     }
 
-    @Override
-    protected void afterExport() {
+    public void afterExport() {
         mainDocument.close();
     }
 
@@ -85,7 +82,7 @@ public final class PdfQueryExporter extends QueryExporter {
         String tags = new TagRepository(ds).findAll().stream().map(Tag::name).collect(Collectors.joining(", "));
         addText(tags, document, REGULAR_TEXT);
         addText("Total emails:", document, SUBHEADER_TEXT);
-        addText(params.getResultCount() + "\n\n", document, REGULAR_TEXT);
+        addText(params.getMaxResultCount() + "\n\n", document, REGULAR_TEXT);
         document.newPage();
         return document;
     }
@@ -108,7 +105,7 @@ public final class PdfQueryExporter extends QueryExporter {
         addText("Date:", document, SUBHEADER_TEXT);
         addText(email.date() + "\n\n", document, REGULAR_TEXT);
         addText("Tags:", document, SUBHEADER_TEXT);
-        String tags = tagRepo.findAll().stream().map(Tag::name).collect(Collectors.joining(", "));
+        String tags = tagRepo.getTags(email.id()).stream().map(Tag::name).collect(Collectors.joining(", "));
         addText(tags + "\n\n", document, REGULAR_TEXT);
         addText("Reply Count:", document, SUBHEADER_TEXT);
         List<EmailEntryPreview> replies = emailRepo.findAllReplies(email.id());

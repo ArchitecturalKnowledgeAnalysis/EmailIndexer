@@ -1,6 +1,7 @@
-package nl.andrewl.email_indexer.data.export.query;
+package nl.andrewl.email_indexer.data.export.datasample.datatype;
 
 import nl.andrewl.email_indexer.data.*;
+import nl.andrewl.email_indexer.data.export.ExporterParameters;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -13,8 +14,10 @@ import java.util.stream.Collectors;
 /**
  * Exports query results to a single file, or multiple files in a directory.
  */
-public final class PlainTextQueryExporter extends QueryExporter {
+public final class TxtExporter implements TypeExporter {
     private static final String MAIN_OUTPUT_FILE = "output.txt";
+
+    private ExporterParameters params;
 
     /**
      * A print writer for the main text file in the export.
@@ -26,35 +29,29 @@ public final class PlainTextQueryExporter extends QueryExporter {
      */
     private Path outputDir;
 
-    public PlainTextQueryExporter(QueryExportParams params) {
-        super(params);
-    }
-
-    @Override
-    protected void beforeExport(EmailDataset ds, Path path) throws IOException {
+    public void beforeExport(EmailDataset ds, Path path, ExporterParameters params) throws IOException {
+        this.params = params;
         outputDir = path;
-        if (this.params.isSeparateEmailThreads() && !Files.exists(outputDir)) {
+        if (this.params.mailingThreadsAreSeparate() && !Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
-        Path pwPath = this.params.isSeparateEmailThreads()
+        Path pwPath = this.params.mailingThreadsAreSeparate()
                 ? outputDir.resolve(MAIN_OUTPUT_FILE)
                 : outputDir;
         printWriter = new PrintWriter(Files.newBufferedWriter(pwPath), false);
         writeMetadata(ds);
     }
 
-    @Override
-    protected void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
+    public void exportEmail(EmailEntry email, int rank, EmailRepository emailRepo, TagRepository tagRepo)
             throws IOException {
-        if (params.isSeparateEmailThreads()) {
+        if (params.mailingThreadsAreSeparate()) {
             writeThreadInSeparateDocument(email, rank, emailRepo, tagRepo);
         } else {
             writeThreadInDocument(email, emailRepo, tagRepo, printWriter, 0);
         }
     }
 
-    @Override
-    protected void afterExport() {
+    public void afterExport() {
         printWriter.close();
     }
 
@@ -67,7 +64,7 @@ public final class PlainTextQueryExporter extends QueryExporter {
                 params.getQuery(),
                 ZonedDateTime.now().toString(),
                 new TagRepository(ds).findAll().stream().map(Tag::name).collect(Collectors.joining(", ")),
-                params.getResultCount()));
+                params.getMaxResultCount()));
         printWriter.println();
     }
 

@@ -1,7 +1,6 @@
 package nl.andrewl.email_indexer.data;
 
 import java.time.ZonedDateTime;
-import java.util.List;
 
 /**
  * Represents a full email entry in the dataset.
