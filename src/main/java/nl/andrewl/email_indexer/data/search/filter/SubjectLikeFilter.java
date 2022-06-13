@@ -11,6 +11,6 @@ import nl.andrewl.email_indexer.data.search.SearchFilter;
 public record SubjectLikeFilter(String subjectString) implements SearchFilter {
 	@Override
 	public String getWhereClause() {
-		return "LOWER(EMAIL.SUBJECT) LIKE '%" + subjectString + "%'";
+		return "LOWER(EMAIL.SUBJECT) LIKE '%" + subjectString.toLowerCase() + "%'";
 	}
 }
