@@ -38,6 +38,11 @@ public class EmailRepository {
 		return count(conn, "SELECT COUNT(DISTINCT EMAIL_ID) FROM EMAIL_TAG");
 	}
 
+	/**
+	 * Finds an email's id, using the email's message id.
+	 * @param messageId The email's message id.
+	 * @return An optional that contains the email's id, if it was found.
+	 */
 	public Optional<Long> findId(String messageId) {
 		try (var stmt = conn.prepareStatement("SELECT ID FROM EMAIL WHERE MESSAGE_ID = ?")) {
 			stmt.setString(1, messageId);
@@ -99,7 +104,7 @@ public class EmailRepository {
 	 * Finds all replies for an email identified by the given id.
 	 * @param id The email's id.
 	 * @return A list of previews of emails that are replies to the email
-	 * identified by the provided message id.
+	 * identified by the provided id.
 	 */
 	public List<EmailEntryPreview> findAllReplies(long id) {
 		return fetch(
@@ -108,6 +113,16 @@ public class EmailRepository {
 				EmailEntryPreview::new,
 				id
 		);
+	}
+
+	/**
+	 * Finds the ids of all replies to an email identified by the given id.
+	 * @param id The email's id.
+	 * @return A list of ids of emails that are replies to the email identified
+	 * by the provided id.
+	 */
+	public List<Long> findAllReplyIds(long id) {
+		return fetch(conn, "SELECT ID FROM EMAIL WHERE PARENT_ID = ?", rs -> rs.getLong(1), id);
 	}
 
 	/**
