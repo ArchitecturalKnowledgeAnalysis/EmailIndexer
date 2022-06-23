@@ -72,4 +72,44 @@ public class EmailIndexSearcher {
 		}
 		return rootEmailIds;
 	}
+
+	/**
+	 * Searches the dataset asynchronously using the given query, and returns
+	 * an ordered list of email ids.
+	 * @param dataset The dataset to search.
+	 * @param queryString The query to use.
+	 * @param maxResults The maximum amount of results to return.
+	 * @return A future that completes when the search is done.
+	 */
+	public CompletableFuture<List<Long>> searchEmailsAsync(EmailDataset dataset, String queryString, int maxResults) {
+		return Async.supply(() -> searchEmails(dataset, queryString, maxResults));
+	}
+
+	/**
+	 * Searches the dataset using the given query, and returns an ordered list
+	 * of email ids, without any regard to the thread in which the emails lie.
+	 * @param dataset The dataset to search.
+	 * @param queryString The query to use.
+	 * @param maxResults The maximum amount of results to return.
+	 * @return A list of email ids.
+	 * @throws IOException If an error occurs while opening the indexes.
+	 * @throws ParseException If the query is invalid.
+	 */
+	public List<Long> searchEmails(EmailDataset dataset, String queryString, int maxResults) throws IOException, ParseException {
+		MultiFieldQueryParser queryParser = new MultiFieldQueryParser(
+				new String[]{"subject", "body"},
+				new StandardAnalyzer()
+		);
+		Query query = queryParser.parse(queryString);
+		List<Long> emailIds = new ArrayList<>();
+		try (var reader = DirectoryReader.open(FSDirectory.open(dataset.getIndexDir()))) {
+			IndexSearcher searcher = new IndexSearcher(reader);
+			TopDocs docs = searcher.search(query, maxResults, Sort.RELEVANCE, false);
+			for (ScoreDoc hit : docs.scoreDocs) {
+				Document doc = searcher.doc(hit.doc);
+				emailIds.add(doc.getField("id").numericValue().longValue());
+			}
+		}
+		return emailIds;
+	}
 }
