@@ -17,26 +17,26 @@ import java.util.Optional;
  * query search.
  */
 public class QueryExporter extends SampleExporter {
-    public QueryExporter(TypeExporter typeExporter, ExporterParameters params) {
-        super(typeExporter, params);
-    }
+	public QueryExporter(TypeExporter typeExporter, ExporterParameters params) {
+		super(typeExporter, params);
+	}
 
-    protected void exportSample(EmailDataset ds, Path path) throws Exception {
-        if (this.params.getQuery() == null || this.params.getQuery().isBlank()) {
-            throw new IllegalArgumentException("Query parameter cannot be blank or null.");
-        }
-        List<Long> rootIds = new EmailIndexSearcher().search(ds, params.getQuery(), params.getMaxResultCount());
-        params.withMaxResultCount(rootIds.size());
-        typeExporter.beforeExport(ds, path, this.params);
-        EmailRepository emailRepo = new EmailRepository(ds);
-        TagRepository tagRepo = new TagRepository(ds);
-        int rank = 1;
-        for (var id : rootIds) {
-            Optional<EmailEntry> optionalEmail = emailRepo.findEmailById(id);
-            if (optionalEmail.isPresent()) {
-                typeExporter.exportEmail(optionalEmail.get(), rank++, emailRepo, tagRepo);
-            }
-        }
-        typeExporter.afterExport();
-    }
+	protected void exportSample(EmailDataset ds, Path path) throws Exception {
+		if (this.params.getQuery() == null || this.params.getQuery().isBlank()) {
+			throw new IllegalArgumentException("Query parameter cannot be blank or null.");
+		}
+		List<Long> rootIds = new EmailIndexSearcher().search(ds, params.getQuery(), params.getMaxResultCount());
+		params.withMaxResultCount(rootIds.size());
+		typeExporter.beforeExport(ds, path, this.params);
+		EmailRepository emailRepo = new EmailRepository(ds);
+		TagRepository tagRepo = new TagRepository(ds);
+		int rank = 1;
+		for (var id : rootIds) {
+			Optional<EmailEntry> optionalEmail = emailRepo.findEmailById(id);
+			if (optionalEmail.isPresent()) {
+				typeExporter.exportEmail(optionalEmail.get(), rank++, emailRepo, tagRepo);
+			}
+		}
+		typeExporter.afterExport();
+	}
 }

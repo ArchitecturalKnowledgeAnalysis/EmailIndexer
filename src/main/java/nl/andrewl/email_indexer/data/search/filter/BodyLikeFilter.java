@@ -10,6 +10,6 @@ import nl.andrewl.email_indexer.data.search.SearchFilter;
 public record BodyLikeFilter(String bodyString) implements SearchFilter {
 	@Override
 	public String getWhereClause() {
-		return "LOWER(EMAIL.BODY) LIKE '%" + bodyString + "%'";
+		return "LOWER(EMAIL.BODY) LIKE '%" + bodyString.toLowerCase() + "%'";
 	}
 }
