@@ -89,6 +89,7 @@ public final class TxtExporter implements TypeExporter {
 									   PrintWriter p, int indentLevel) {
 		String indent = "\t".repeat(indentLevel);
 		p.println(indent + "Message id: " + email.messageId());
+		p.println(indent + "Email id: " + email.id());
 		p.println(indent + "Subject: " + email.subject());
 		p.println(indent + "Sent from: " + email.sentFrom());
 		p.println(indent + "Date: " + email.date());

@@ -101,6 +101,8 @@ public final class PdfExporter implements TypeExporter {
 
 	private void writeThreadInDocument(Document document, EmailEntry email, String index) throws DocumentException {
 		addText("Email " + index, document, HEADER_TEXT);
+		addText("Email id:", document, SUBHEADER_TEXT);
+		addText(String.valueOf(email.id()), document, REGULAR_TEXT);
 		addText("Subject:", document, SUBHEADER_TEXT);
 		addText(email.subject() + "\n\n", document, REGULAR_TEXT);
 		addText("Sent from:", document, SUBHEADER_TEXT);
