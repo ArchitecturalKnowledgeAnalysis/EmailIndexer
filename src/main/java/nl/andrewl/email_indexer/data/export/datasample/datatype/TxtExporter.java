@@ -97,6 +97,9 @@ public final class TxtExporter implements TypeExporter {
 		p.println(indent + "Hidden: " + email.hidden());
 		p.println(indent + "Body---->>>");
 		email.body().trim().lines().forEachOrdered(line -> p.println(indent + line));
+		if (!params.repliesAreExported()){
+			return;
+		}
 		p.println(indent + "-------->>>");
 		List<EmailEntryPreview> replies = emailRepo.findAllReplies(email.id());
 		if (!replies.isEmpty()) {
