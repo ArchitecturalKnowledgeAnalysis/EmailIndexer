@@ -115,7 +115,7 @@ public final class PdfExporter implements TypeExporter {
 		addText(replies.size() + "\n\n", document, REGULAR_TEXT);
 		addText("Body:\n\n", document, SUBHEADER_TEXT);
 		addText(email.body(), document, REGULAR_TEXT);
-        if (!params.repliesAreExported()){
+		if (!params.repliesAreExported()){
 			return;
 		}
 		document.newPage();
