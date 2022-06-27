@@ -113,6 +113,9 @@ public final class PdfExporter implements TypeExporter {
         addText("Body:\n\n", document, SUBHEADER_TEXT);
         addText(email.body(), document, REGULAR_TEXT);
         document.newPage();
+        if (!params.repliesAreExported()) {
+            return;
+        }
         for (int i = 0; i < replies.size(); i++) {
             EmailEntryPreview reply = replies.get(i);
             int replyId = i + 1;

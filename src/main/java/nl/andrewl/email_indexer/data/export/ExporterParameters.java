@@ -122,7 +122,7 @@ public class ExporterParameters {
         return this;
     }
 
-    public boolean getExportReplies() {
+    public boolean repliesAreExported() {
         return exportReplies;
     }
 
