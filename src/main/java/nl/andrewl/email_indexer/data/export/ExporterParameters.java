@@ -30,37 +30,60 @@ public class ExporterParameters {
     private int maxResultCount = 100;
     private OutputType outputType = OutputType.UNSET;
     private boolean separateMailingThreads = false;
+    private boolean exportReplies = false;
 
     public String getQuery() {
         return query;
+    }
+
+    public ExporterParameters withQuery(String query) {
+        this.query = query;
+        return this;
     }
 
     public EmailRepository getRepository() {
         return repository;
     }
 
+    public ExporterParameters withRepository(EmailRepository repository) {
+        this.repository = repository;
+        return this;
+    }
+
     public TagRepository getTagRepository() {
         return tagRepository;
+    }
+
+    public ExporterParameters withTagRepository(TagRepository tagRepository) {
+        this.tagRepository = tagRepository;
+        return this;
     }
 
     public EmailDataset getDataset() {
         return dataset;
     }
 
-    public Path getOutputPath() {
-        return outputPath;
+    public ExporterParameters withDataset(EmailDataset dataset) {
+        this.dataset = dataset;
+        return this;
     }
 
     public List<EmailEntryPreview> getEmails() {
         return emails;
     }
 
-    public int getMaxResultCount() {
-        return maxResultCount;
+    public ExporterParameters withEmails(List<EmailEntryPreview> emails) {
+        this.emails = emails;
+        return this;
     }
 
-    public OutputType getOutputType() {
-        return outputType;
+    public Path getOutputPath() {
+        return outputPath;
+    }
+
+    public ExporterParameters withOutputPath(Path outputPath) {
+        this.outputPath = outputPath;
+        return this;
     }
 
     public List<SearchFilter> getFilters() {
@@ -72,38 +95,8 @@ public class ExporterParameters {
         return this;
     }
 
-    public boolean mailingThreadsAreSeparate() {
-        return separateMailingThreads;
-    }
-
-    public ExporterParameters withQuery(String query) {
-        this.query = query;
-        return this;
-    }
-
-    public ExporterParameters withRepository(EmailRepository repository) {
-        this.repository = repository;
-        return this;
-    }
-
-    public ExporterParameters withTagRepository(TagRepository tagRepository) {
-        this.tagRepository = tagRepository;
-        return this;
-    }
-
-    public ExporterParameters withDataset(EmailDataset dataset) {
-        this.dataset = dataset;
-        return this;
-    }
-
-    public ExporterParameters withEmails(List<EmailEntryPreview> emails) {
-        this.emails = emails;
-        return this;
-    }
-
-    public ExporterParameters withOutputPath(Path outputPath) {
-        this.outputPath = outputPath;
-        return this;
+    public int getMaxResultCount() {
+        return maxResultCount;
     }
 
     public ExporterParameters withMaxResultCount(int maxResultCount) {
@@ -111,13 +104,30 @@ public class ExporterParameters {
         return this;
     }
 
+    public OutputType getOutputType() {
+        return outputType;
+    }
+
     public ExporterParameters withOutputType(OutputType outputType) {
         this.outputType = outputType;
         return this;
     }
 
+    public boolean mailingThreadsAreSeparate() {
+        return separateMailingThreads;
+    }
+
     public ExporterParameters withSeparateMailingThreads(boolean separateMailingThreads) {
         this.separateMailingThreads = separateMailingThreads;
+        return this;
+    }
+
+    public boolean getExportReplies() {
+        return exportReplies;
+    }
+
+    public ExporterParameters withExportReplies(boolean exportReplies) {
+        this.exportReplies = exportReplies;
         return this;
     }
 }
