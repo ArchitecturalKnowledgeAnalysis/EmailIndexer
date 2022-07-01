@@ -77,7 +77,7 @@ public class EmailDatasetGenerator {
 
 			// Generate metadata
 			Properties props = new Properties();
-			props.setProperty("version", "2");
+			props.setProperty("version", "3");
 			props.store(Files.newBufferedWriter(dataset.getMetadataFile()), null);
 
 			status.sendMessage("Dataset generation complete.");
