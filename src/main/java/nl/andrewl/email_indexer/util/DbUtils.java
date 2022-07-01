@@ -4,6 +4,9 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -50,11 +53,12 @@ public final class DbUtils {
 			for (var arg : args) stmt.setObject(idx++, arg);
 			int count = stmt.executeUpdate();
 			if (count != 1) throw new SQLException("Only one row should be inserted.");
-			var rs = stmt.getGeneratedKeys();
-			if (rs.next()) {
-				return rs.getLong(1);
-			} else {
-				throw new SQLException("No keys were returned.");
+			try (var rs = stmt.getGeneratedKeys()) {
+				if (rs.next()) {
+					return rs.getLong(1);
+				} else {
+					throw new SQLException("No keys were returned.");
+				}
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -133,5 +137,30 @@ public final class DbUtils {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
+	}
+
+	/**
+	 * Helper method that gets a nullable long integer value from a result set.
+	 * @param rs The result set.
+	 * @param columnIndex The column index to get the value from.
+	 * @return The long value, or null.
+	 * @throws SQLException If an error occurs.
+	 */
+	public static Long getNullableLong(ResultSet rs, int columnIndex) throws SQLException {
+		long value = rs.getLong(columnIndex);
+		return rs.wasNull() ? null : value;
+	}
+
+	/**
+	 * Helper method that gets a {@link ZonedDateTime} from a long integer
+	 * value representing the seconds since the unix epoch.
+	 * @param rs The result set.
+	 * @param columnIndex The column index to get the value from.
+	 * @return The date.
+	 * @throws SQLException If an error occurs.
+	 */
+	public static ZonedDateTime fromEpochSeconds(ResultSet rs, int columnIndex) throws SQLException {
+		long seconds = rs.getLong(columnIndex);
+		return ZonedDateTime.ofInstant(Instant.ofEpochSecond(seconds), ZoneOffset.UTC);
 	}
 }

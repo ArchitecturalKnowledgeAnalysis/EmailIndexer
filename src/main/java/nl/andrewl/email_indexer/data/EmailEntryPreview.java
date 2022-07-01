@@ -1,7 +1,11 @@
 package nl.andrewl.email_indexer.data;
 
+import nl.andrewl.email_indexer.util.DbUtils;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
 /**
@@ -17,15 +21,14 @@ public record EmailEntryPreview(
 		ZonedDateTime date,
 		boolean hidden
 ) {
-	public EmailEntryPreview (ResultSet rs) throws SQLException {
-		this(
-				rs.getLong(1),
-				rs.getObject(2, Long.class),
-				rs.getString(3),
-				rs.getString(4),
-				rs.getString(5),
-				rs.getObject(6, ZonedDateTime.class),
-				rs.getBoolean(7)
-		);
+	public static EmailEntryPreview fromResultSet(ResultSet rs) throws SQLException {
+		long id = rs.getLong(1);
+		Long parentId = DbUtils.getNullableLong(rs, 2);
+		String messageId = rs.getString(3);
+		String subject = rs.getString(4);
+		String sentFrom = rs.getString(5);
+		ZonedDateTime date = ZonedDateTime.ofInstant(Instant.ofEpochSecond(rs.getLong(6)), ZoneOffset.UTC);
+		boolean hidden = rs.getBoolean(7);
+		return new EmailEntryPreview(id, parentId, messageId, subject, sentFrom, date, hidden);
 	}
 }

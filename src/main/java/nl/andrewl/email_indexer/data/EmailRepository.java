@@ -1,7 +1,11 @@
 package nl.andrewl.email_indexer.data;
 
+import nl.andrewl.email_indexer.util.DbUtils;
+
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -66,12 +70,12 @@ public class EmailRepository {
 			if (!rs.next()) return Optional.empty();
 			var entry = new EmailEntry(
 					rs.getLong(1),
-					rs.getObject(2, Long.class),
+					DbUtils.getNullableLong(rs, 2),
 					rs.getString(3),
 					rs.getString(4),
 					rs.getString(5),
 					rs.getString(6),
-					rs.getObject(7, ZonedDateTime.class),
+					DbUtils.fromEpochSeconds(rs, 7),
 					rs.getString(8),
 					rs.getBoolean(9)
 			);
@@ -93,7 +97,7 @@ public class EmailRepository {
 			stmt.setLong(1, id);
 			var rs = stmt.executeQuery();
 			if (!rs.next()) return Optional.empty();
-			return Optional.of(new EmailEntryPreview(rs));
+			return Optional.of(EmailEntryPreview.fromResultSet(rs));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Optional.empty();
@@ -110,7 +114,7 @@ public class EmailRepository {
 		return fetch(
 				conn,
 				QueryCache.load("/sql/preview/fetch_email_preview_by_parent_id.sql"),
-				EmailEntryPreview::new,
+				EmailEntryPreview::fromResultSet,
 				id
 		);
 	}
@@ -189,7 +193,7 @@ public class EmailRepository {
 				stmt.setLong(1, nextId);
 				var rs = stmt.executeQuery();
 				if (!rs.next()) return Optional.empty();
-				Long parentId = rs.getObject(1, Long.class);
+				Long parentId = DbUtils.getNullableLong(rs, 1);
 				lastId = nextId;
 				nextId = parentId;
 			}
@@ -197,7 +201,7 @@ public class EmailRepository {
 				stmt2.setLong(1, lastId);
 				var rs2 = stmt2.executeQuery();
 				if (rs2.next()) {
-					return Optional.of(new EmailEntryPreview(rs2));
+					return Optional.of(EmailEntryPreview.fromResultSet(rs2));
 				} else {
 					return Optional.empty();
 				}

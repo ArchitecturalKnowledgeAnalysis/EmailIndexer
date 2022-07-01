@@ -68,7 +68,7 @@ public class EmailSearcher {
 				var countStmt = conn.prepareStatement(countQuery)
 			) {
 				var queryRs = queryStmt.executeQuery();
-				while (queryRs.next()) entries.add(new EmailEntryPreview(queryRs));
+				while (queryRs.next()) entries.add(EmailEntryPreview.fromResultSet(queryRs));
 				var countRs = countStmt.executeQuery();
 				countRs.next();
 				return EmailSearchResult.of(entries, page, size, countRs.getLong(1));

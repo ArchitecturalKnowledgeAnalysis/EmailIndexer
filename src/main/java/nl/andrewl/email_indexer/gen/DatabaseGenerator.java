@@ -49,7 +49,7 @@ public class DatabaseGenerator implements AutoCloseable, EmailHandler {
 		emailInsertStatement.setString(2, subject);
 		emailInsertStatement.setString(3, inReplyTo);
 		emailInsertStatement.setString(4, sentFrom);
-		emailInsertStatement.setObject(5, date);
+		emailInsertStatement.setLong(5, date.toEpochSecond());
 		emailInsertStatement.setString(6, body);
 		emailInsertStatement.executeUpdate();
 	}
@@ -110,7 +110,6 @@ public class DatabaseGenerator implements AutoCloseable, EmailHandler {
 	public void close() throws Exception {
 		this.emailExistsStatement.close();
 		this.emailInsertStatement.close();
-		this.conn.commit();
 		this.conn.close();
 	}
 

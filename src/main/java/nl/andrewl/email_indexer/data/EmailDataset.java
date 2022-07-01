@@ -45,6 +45,9 @@ public class EmailDataset {
 	public void establishConnection() throws SQLException {
 		if (this.dbConn != null) return;
 		this.dbConn = DriverManager.getConnection(getJdbcUrl(getDatabaseFile()));
+		try (var stmt = dbConn.prepareStatement("PRAGMA foreign_keys = ON")) {
+			stmt.execute();
+		}
 	}
 
 	public Connection getConnection() {
@@ -60,7 +63,7 @@ public class EmailDataset {
 	}
 
 	public Path getDatabaseFile() {
-		return this.openDir.resolve("database.mv.db");
+		return this.openDir.resolve("database.db");
 	}
 
 	public Path getMetadataFile() {
@@ -111,7 +114,7 @@ public class EmailDataset {
 	 */
 	public CompletableFuture<Void> close() {
 		return Async.run(() -> {
-			try (var stmt = dbConn.prepareStatement("SHUTDOWN COMPACT;")) {
+			try (var stmt = dbConn.prepareStatement("VACUUM")) {
 				stmt.execute();
 			}
 			this.dbConn.close();
@@ -141,9 +144,9 @@ public class EmailDataset {
 	 */
 	public static String getJdbcUrl(Path dbFile) {
 		String dbFileName = dbFile.toAbsolutePath().toString();
-		if (dbFileName.endsWith(".mv.db")) {
-			dbFileName = dbFileName.substring(0, dbFileName.length() - ".mv.db".length());
+		if (!dbFileName.endsWith(".db")) {
+			dbFileName += ".db";
 		}
-		return "jdbc:h2:file:" + dbFileName + ";DB_CLOSE_ON_EXIT=FALSE";
+		return "jdbc:sqlite:" + dbFileName;
 	}
 }

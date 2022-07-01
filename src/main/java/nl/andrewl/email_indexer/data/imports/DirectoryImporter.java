@@ -16,8 +16,8 @@ public class DirectoryImporter implements EmailDatasetImporter {
 	public CompletableFuture<EmailDataset> importFrom(Path path) {
 		return Async.supply(() -> {
 			if (!Files.isDirectory(path)) throw new IllegalArgumentException(path + " is not a directory.");
-			if (Files.notExists(path.resolve("index")) || Files.notExists(path.resolve("database.mv.db"))) {
-				throw new IllegalArgumentException("Invalid dataset directory. A dataset must contain an \"index\" directory, and a \"database.mv.db\" file.");
+			if (Files.notExists(path.resolve("index")) || Files.notExists(path.resolve("database.db"))) {
+				throw new IllegalArgumentException("Invalid dataset directory. A dataset must contain an \"index\" directory, and a \"database.db\" file.");
 			}
 			return new EmailDataset(path);
 		});
