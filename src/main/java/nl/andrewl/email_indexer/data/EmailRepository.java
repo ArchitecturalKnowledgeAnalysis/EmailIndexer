@@ -300,4 +300,27 @@ public class EmailRepository {
 				MutationEntry::new
 		);
 	}
+
+	public List<EmailNote> getNotes(long emailId) {
+		return fetch(
+				conn,
+				"SELECT * FROM EMAIL_NOTE WHERE EMAIL_ID = ? ORDER BY CREATED_AT ASC",
+				EmailNote::fromResultSet,
+				emailId
+		);
+	}
+
+	public EmailNote addNote(long emailId, String note) {
+		long createdAt = Instant.now().getEpochSecond();
+		long noteId = insertWithId(
+				conn,
+				"INSERT INTO EMAIL_NOTE (EMAIL_ID, CREATED_AT, MESSAGE) VALUES (?, ?, ?)",
+				emailId, createdAt, note
+		);
+		return new EmailNote(noteId, emailId, createdAt, note);
+	}
+
+	public void deleteNote(long noteId) {
+		update(conn, "DELETE FROM EMAIL_NOTE WHERE ID = ?", noteId);
+	}
 }

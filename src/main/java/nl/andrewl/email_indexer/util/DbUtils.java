@@ -152,6 +152,18 @@ public final class DbUtils {
 	}
 
 	/**
+	 * Helper method that gets a nullable integer value from a result set.
+	 * @param rs The result set.
+	 * @param columnIndex The column index to get the value from.
+	 * @return The integer value, or null.
+	 * @throws SQLException If an error occurs.
+	 */
+	public static Integer getNullableInt(ResultSet rs, int columnIndex) throws SQLException {
+		int value = rs.getInt(columnIndex);
+		return rs.wasNull() ? null : value;
+	}
+
+	/**
 	 * Helper method that gets a {@link ZonedDateTime} from a long integer
 	 * value representing the seconds since the unix epoch.
 	 * @param rs The result set.

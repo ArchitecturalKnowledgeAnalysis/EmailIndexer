@@ -6,8 +6,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
 
-import static nl.andrewl.email_indexer.util.DbUtils.count;
-import static nl.andrewl.email_indexer.util.DbUtils.update;
+import static nl.andrewl.email_indexer.util.DbUtils.*;
 
 /**
  * Repository for interacting with tags.
@@ -83,7 +82,8 @@ public class TagRepository {
 	 */
 	public Tag createTag(String name, String description) {
 		int id = (int) DbUtils.insertWithId(conn, "INSERT INTO TAG (NAME, DESCRIPTION) VALUES (?, ?)", name, description);
-		return new Tag(id, name, description);
+		rectifyTagOrdering();
+		return getTagById(id).orElseThrow();
 	}
 
 	/**
@@ -93,6 +93,7 @@ public class TagRepository {
 	 */
 	public void deleteTag(int id) {
 		update(conn, "DELETE FROM TAG WHERE ID = ?", id);
+		rectifyTagOrdering();
 	}
 
 	/**
@@ -121,6 +122,30 @@ public class TagRepository {
 	 */
 	public void setName(int tagId, String newName) {
 		update(conn, "UPDATE TAG SET NAME = ? WHERE ID = ?", newName, tagId);
+	}
+
+	/**
+	 * Updates a tag's sequence. All other tags' sequence values will be
+	 * reordered to fit this tag's sequence.
+	 * @param tagId The id of the tag.
+	 * @param newSeq The new sequence value. 1 indicates the tag is first, and
+	 * increase by 1 for each tag.
+	 */
+	public void setSeq(int tagId, int newSeq) {
+		DbUtils.doTransaction(conn, c -> {
+			List<Integer> tagIds = DbUtils.fetch(c, "SELECT ID FROM TAG ORDER BY SEQ ASC", rs -> rs.getInt(1));
+			tagIds.remove(tagId);
+			tagIds.add(Math.min(tagIds.size(), Math.max(0, newSeq - 1)), tagId);
+			// Rectify all tags with the new sequence values.
+			int n = 1;
+			try (var stmt = conn.prepareStatement("UPDATE TAG SET SEQ = ? WHERE ID = ?")) {
+				for (var id : tagIds) {
+					stmt.setInt(1, n++);
+					stmt.setInt(2, id);
+					stmt.executeUpdate();
+				}
+			}
+		});
 	}
 
 	/**
@@ -304,5 +329,42 @@ public class TagRepository {
 		List<Tag> tagList = new ArrayList<>(tags);
 		Collections.sort(tagList);
 		return tagList;
+	}
+
+	public List<TagGroup> getGroups(int tagId) {
+		return fetch(
+				conn,
+				"SELECT * FROM TAG_GROUP WHERE ID IN (SELECT GROUP_ID FROM TAG_GROUP_TAGS WHERE TAG_ID = ?)",
+				TagGroup::fromResultSet,
+				tagId
+		);
+	}
+
+	public boolean isInGroup(int tagId, int groupId) {
+		return count(conn, "SELECT COUNT(TAG_ID) FROM TAG_GROUP_TAGS WHERE GROUP_ID = ? AND TAG_ID = ?", groupId, tagId) > 0;
+	}
+
+	public void addGroup(int tagId, int groupId) {
+		if (!isInGroup(tagId, groupId)) {
+			update(conn, "INSERT INTO TAG_GROUP_TAGS (GROUP_ID, TAG_ID) VALUES (?, ?)", groupId, tagId);
+		}
+	}
+
+	public void removeGroup(int tagId, int groupId) {
+		update(conn, "DELETE FROM TAG_GROUP_TAGS WHERE GROUP_ID = ? AND TAG_ID = ?", groupId, tagId);
+	}
+
+	private void rectifyTagOrdering() {
+		doTransaction(conn, c -> {
+			List<Integer> tagIds = DbUtils.fetch(conn, "SELECT ID FROM TAG ORDER BY SEQ ASC", rs -> rs.getInt(1));
+			int n = 1;
+			try (var stmt = conn.prepareStatement("UPDATE TAG SET SEQ = ? WHERE ID = ?")) {
+				for (var tagId : tagIds) {
+					stmt.setInt(1, n++);
+					stmt.setInt(2, tagId);
+					stmt.executeUpdate();
+				}
+			}
+		});
 	}
 }
