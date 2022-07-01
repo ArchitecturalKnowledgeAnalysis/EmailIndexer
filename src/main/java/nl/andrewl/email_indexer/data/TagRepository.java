@@ -92,8 +92,10 @@ public class TagRepository {
 	 * @param id The id of the tag to delete.
 	 */
 	public void deleteTag(int id) {
-		update(conn, "DELETE FROM TAG WHERE ID = ?", id);
-		rectifyTagOrdering();
+		doTransaction(conn, c -> {
+			update(c, "DELETE FROM TAG WHERE ID = ?", id);
+			rectifyTagOrdering();
+		});
 	}
 
 	/**
@@ -355,16 +357,16 @@ public class TagRepository {
 	}
 
 	private void rectifyTagOrdering() {
-		doTransaction(conn, c -> {
-			List<Integer> tagIds = DbUtils.fetch(conn, "SELECT ID FROM TAG ORDER BY SEQ ASC", rs -> rs.getInt(1));
-			int n = 1;
-			try (var stmt = conn.prepareStatement("UPDATE TAG SET SEQ = ? WHERE ID = ?")) {
-				for (var tagId : tagIds) {
-					stmt.setInt(1, n++);
-					stmt.setInt(2, tagId);
-					stmt.executeUpdate();
-				}
+		List<Integer> tagIds = DbUtils.fetch(conn, "SELECT ID FROM TAG ORDER BY SEQ ASC", rs -> rs.getInt(1));
+		int n = 1;
+		try (var stmt = conn.prepareStatement("UPDATE TAG SET SEQ = ? WHERE ID = ?")) {
+			for (var tagId : tagIds) {
+				stmt.setInt(1, n++);
+				stmt.setInt(2, tagId);
+				stmt.executeUpdate();
 			}
-		});
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 }
