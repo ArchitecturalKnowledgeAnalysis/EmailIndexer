@@ -1,22 +1,5 @@
 package nl.andrewl.email_indexer.gen;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-
-import org.apache.lucene.queryparser.classic.ParseException;
-import org.h2.store.fs.FileUtils;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
 import nl.andrewl.email_indexer.data.EmailDataset;
 import nl.andrewl.email_indexer.data.EmailRepository;
 import nl.andrewl.email_indexer.data.Tag;
@@ -34,6 +17,20 @@ import nl.andrewl.email_indexer.data.search.filter.HiddenFilter;
 import nl.andrewl.email_indexer.data.search.filter.RootFilter;
 import nl.andrewl.email_indexer.data.search.filter.TagFilter;
 import nl.andrewl.email_indexer.util.DbUtils;
+import nl.andrewl.email_indexer.util.FileUtils;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * A test which runs through some common dataset workflows.
@@ -43,7 +40,11 @@ public class EmailDatasetIntegrationTests {
 
 	@BeforeAll
 	public static void beforeAll() {
-		FileUtils.deleteRecursive(TEST_DIR.toString(), true);
+		try {
+			FileUtils.deleteDirectoryRecursive(TEST_DIR);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Test
